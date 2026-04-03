@@ -1,0 +1,19 @@
+{
+  "name": "becoming-focus-timer",
+  "version": "2.0.0",
+  "description": "Enterprise-grade focus timer with session analytics and cloud sync",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'Build complete'",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@vercel/kv": "^0.2.1",
+    "jose": "^5.0.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

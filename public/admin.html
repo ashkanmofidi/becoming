@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Becoming... Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{--bg:#0A0E1A;--bg2:#111627;--bg3:#1A2035;--bd:#252D45;--bd2:#2E3A58;--tx:#E0E4F0;--tx2:#8892AD;--tx3:#5A6380;--bl:#3B82F6;--bl2:#60A5FA;--gr:#22C55E;--yl:#EAB308;--rd:#EF4444;--body:'Lexend',sans-serif;--mono:'IBM Plex Mono',monospace}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tx2);font-family:var(--body);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+::selection{background:rgba(59,130,246,.3)}
+
+.auth-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:24px}
+.auth-logo{font-family:var(--body);font-size:24px;font-weight:700;color:var(--tx)}.auth-logo span{color:var(--bl)}
+.auth-sub{color:var(--tx3);font-size:14px}
+.auth-error{color:var(--rd);font-size:13px;min-height:18px;margin-top:8px}
+.auth-note{font-size:11px;color:var(--tx3);margin-top:12px}
+
+.dash{display:none;min-height:100vh}
+.dash-nav{padding:16px 32px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:rgba(10,14,26,.95);backdrop-filter:blur(16px);z-index:10}
+.dash-title{font-size:16px;font-weight:600;color:var(--tx)}.dash-title span{color:var(--bl)}
+.dash-right{display:flex;align-items:center;gap:10px}
+.dash-right img{width:28px;height:28px;border-radius:50%}
+.dash-right span{font-size:12px;color:var(--tx3)}
+.logout-btn{font-size:11px;color:var(--tx3);cursor:pointer;padding:4px 10px;border:1px solid var(--bd);border-radius:6px;background:none;font-family:var(--body);transition:all .2s}
+.logout-btn:hover{border-color:var(--rd);color:var(--rd)}
+
+.dash-body{padding:24px 32px;max-width:1200px;margin:0 auto}
+.dash-ts{font-family:var(--mono);font-size:11px;color:var(--tx3);margin-bottom:20px}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:24px}
+.kpi{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:20px 16px;text-align:center}
+.kpi-val{font-size:28px;font-weight:700;color:var(--tx);line-height:1;margin-bottom:4px}
+.kpi-val.green{color:var(--gr)}.kpi-val.yellow{color:var(--yl)}.kpi-val.red{color:var(--rd)}.kpi-val.blue{color:var(--bl2)}
+.kpi-label{font-family:var(--mono);font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em}
+
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+.chart-card{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:20px}
+.chart-title{font-size:13px;font-weight:600;color:var(--tx);margin-bottom:16px}
+.chart-bars{display:flex;align-items:flex-end;gap:3px;height:100px}
+.chart-bar{flex:1;background:var(--bl);border-radius:2px 2px 0 0;min-height:2px;transition:all .2s;position:relative;cursor:crosshair}
+.chart-bar:hover{background:var(--bl2)}
+.chart-bar:hover::after{content:attr(data-val);position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:9px;color:var(--bl2);white-space:nowrap}
+.chart-x{display:flex;gap:3px;margin-top:6px}
+.chart-x span{flex:1;font-family:var(--mono);font-size:8px;color:var(--tx3);text-align:center}
+
+.section{margin-bottom:24px}
+.sec-title{font-size:15px;font-weight:600;color:var(--tx);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.sec-title .badge{font-family:var(--mono);font-size:10px;padding:2px 8px;background:var(--bg3);border:1px solid var(--bd);border-radius:4px;color:var(--tx3)}
+.tbl{width:100%;border-collapse:collapse;background:var(--bg2);border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.tbl th{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;padding:12px 14px;text-align:left;border-bottom:1px solid var(--bd);background:var(--bg3)}
+.tbl td{padding:10px 14px;border-bottom:1px solid rgba(37,45,69,.4);font-size:13px}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(59,130,246,.03)}
+.user-cell{display:flex;align-items:center;gap:10px}
+.user-cell img{width:24px;height:24px;border-radius:50%;flex-shrink:0}
+.user-name{color:var(--tx);font-weight:500}
+.user-email{font-family:var(--mono);font-size:11px;color:var(--tx3)}
+.status{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.06em}
+.status.active{background:rgba(34,197,94,.12);color:var(--gr);border:1px solid rgba(34,197,94,.2)}
+.status.dormant{background:rgba(234,179,8,.1);color:var(--yl);border:1px solid rgba(234,179,8,.2)}
+.status.churned{background:rgba(239,68,68,.1);color:var(--rd);border:1px solid rgba(239,68,68,.2)}
+.sparkline{display:flex;align-items:flex-end;gap:1px;height:20px}
+.sparkline div{flex:1;min-width:2px;background:var(--bl);border-radius:1px;min-height:1px}
+
+/* Admin management */
+.admin-box{background:var(--bg2);border:1px solid var(--bd);border-radius:12px;padding:20px;margin-bottom:24px}
+.admin-box h3{font-size:14px;font-weight:600;color:var(--tx);margin-bottom:12px}
+.admin-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.admin-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:13px}
+.admin-item .email{color:var(--tx);font-family:var(--mono);font-size:12px}
+.admin-item .primary{font-size:10px;color:var(--bl2);padding:2px 8px;border:1px solid rgba(59,130,246,.2);border-radius:4px;background:rgba(59,130,246,.08)}
+.admin-item .remove-btn{font-size:10px;color:var(--rd);cursor:pointer;padding:3px 8px;border:1px solid rgba(239,68,68,.2);border-radius:4px;background:none;font-family:var(--body);transition:all .2s}
+.admin-item .remove-btn:hover{background:rgba(239,68,68,.1)}
+.admin-add{display:flex;gap:8px}
+.admin-add input{flex:1;padding:8px 12px;background:var(--bg3);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-family:var(--mono);font-size:12px;outline:none}
+.admin-add input:focus{border-color:var(--bl)}
+.admin-add button{padding:8px 16px;background:var(--bl);color:#fff;border:none;border-radius:8px;font-family:var(--body);font-size:12px;font-weight:500;cursor:pointer;transition:background .2s}
+.admin-add button:hover{background:#2563EB}
+
+.wl-item{padding:12px 16px;background:var(--bg2);border:1px solid var(--bd);border-radius:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.wl-name{color:var(--tx);font-weight:500;font-size:13px}
+.wl-email{font-family:var(--mono);font-size:11px;color:var(--tx3)}
+.wl-date{font-family:var(--mono);font-size:10px;color:var(--tx3)}
+.fb-item{padding:12px 16px;background:var(--bg2);border:1px solid var(--bd);border-radius:8px;margin-bottom:8px}
+.fb-text{color:var(--tx);font-size:13px;margin-bottom:4px}
+.fb-meta{font-family:var(--mono);font-size:10px;color:var(--tx3)}
+.empty{color:var(--tx3);font-style:italic;font-size:13px;padding:20px;text-align:center}
+.loading{display:flex;align-items:center;justify-content:center;height:60vh;color:var(--tx3);font-size:14px;gap:8px}
+.spinner{width:16px;height:16px;border:2px solid var(--bd);border-top-color:var(--bl);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(3,1fr)}.charts{grid-template-columns:1fr}.dash-body{padding:16px}}
+@media(max-width:600px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="auth-screen" id="authScreen">
+  <div class="auth-logo">Becoming<span>...</span> Admin</div>
+  <div class="auth-sub">Sign in with your admin Google account</div>
+  <div id="gBtnWrap" style="margin-top:16px"></div>
+  <div class="auth-error" id="authErr"></div>
+  <div class="auth-note">Only authorized admin emails can access this dashboard.</div>
+</div>
+
+<div class="dash" id="dash">
+  <div class="dash-nav">
+    <div class="dash-title">Becoming<span>...</span> Admin</div>
+    <div class="dash-right">
+      <img id="userPhoto" src="" alt="">
+      <span id="userName"></span>
+      <button class="logout-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+  <div class="dash-body" id="dashBody">
+    <div class="loading"><div class="spinner"></div>Loading analytics...</div>
+  </div>
+</div>
+
+<script>
+/* Google Auth */
+function initGoogle() {
+  fetch('/api/config').then(r => r.json()).then(cfg => {
+    if (!cfg.clientId) { showErr('OAuth not configured'); return; }
+    const chk = setInterval(() => {
+      if (window.google && google.accounts) {
+        clearInterval(chk);
+        google.accounts.id.initialize({ client_id: cfg.clientId, callback: onCredential, auto_select: false });
+        google.accounts.id.renderButton(document.getElementById('gBtnWrap'), { theme: 'filled_black', size: 'large', text: 'signin_with', shape: 'pill', width: 280 });
+      }
+    }, 200);
+    setTimeout(() => clearInterval(chk), 10000);
+  }).catch(() => showErr('Cannot load config'));
+}
+
+async function onCredential(response) {
+  showErr('Signing in...');
+  try {
+    const res = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ credential: response.credential }) });
+    const data = await res.json();
+    if (!data.success) { showErr('Login failed'); return; }
+    enterDash(data.user);
+  } catch (e) { showErr('Connection error'); }
+}
+
+function showErr(msg) { document.getElementById('authErr').textContent = msg; }
+
+async function doLogout() { await fetch('/api/auth', { method: 'DELETE' }); location.reload(); }
+
+function enterDash(user) {
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('dash').style.display = 'block';
+  if (user) {
+    document.getElementById('userPhoto').src = user.photo || '';
+    document.getElementById('userName').textContent = user.name || '';
+  }
+  loadDashboard();
+}
+
+async function loadDashboard() {
+  try {
+    const res = await fetch('/api/admin');
+    if (res.status === 401) { showErr('Please sign in'); document.getElementById('authScreen').style.display = 'flex'; document.getElementById('dash').style.display = 'none'; return; }
+    if (res.status === 403) { document.getElementById('dashBody').innerHTML = '<div class="empty" style="height:60vh;display:flex;align-items:center;justify-content:center;font-size:16px;color:#EF4444">Access denied. Your email is not an authorized admin.</div>'; return; }
+    if (!res.ok) throw new Error('API error');
+    renderDashboard(await res.json());
+  } catch (e) { document.getElementById('dashBody').innerHTML = '<div class="empty" style="height:60vh;display:flex;align-items:center;justify-content:center">Error: ' + e.message + '</div>'; }
+}
+
+function renderDashboard(d) {
+  const o = d.overview;
+  const body = document.getElementById('dashBody');
+
+  let adminHtml = '';
+  if (d.isPrimary) {
+    adminHtml = `<div class="admin-box"><h3>Admin Access Management</h3>
+      <div class="admin-list" id="adminList">${d.adminEmails.map(e =>
+        `<div class="admin-item"><span class="email">${esc(e)}</span>${e.toLowerCase() === d.currentAdmin.toLowerCase() ? '<span class="primary">Primary</span>' : `<button class="remove-btn" onclick="removeAdmin('${esc(e)}')">Remove</button>`}</div>`
+      ).join('')}</div>
+      <div class="admin-add"><input type="email" id="newAdminEmail" placeholder="email@example.com"><button onclick="addAdmin()">Add Admin</button></div>
+    </div>`;
+  }
+
+  body.innerHTML = `
+    <div class="dash-ts">Generated ${new Date(d.generatedAt).toLocaleString()} &middot; Logged in as ${esc(d.currentAdmin)}${d.isPrimary ? ' (Primary)' : ''}</div>
+    ${adminHtml}
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-val blue">${o.totalUsers}/${o.maxUsers}</div><div class="kpi-label">Users / Capacity</div></div>
+      <div class="kpi"><div class="kpi-val green">${o.activeUsers}</div><div class="kpi-label">Active (7d)</div></div>
+      <div class="kpi"><div class="kpi-val yellow">${o.dormantUsers}</div><div class="kpi-label">Dormant (30d)</div></div>
+      <div class="kpi"><div class="kpi-val">${o.totalSessions}</div><div class="kpi-label">Total Sessions</div></div>
+      <div class="kpi"><div class="kpi-val">${o.totalHours}h</div><div class="kpi-label">Focus Hours</div></div>
+      <div class="kpi"><div class="kpi-val">${o.waitlistCount}</div><div class="kpi-label">Waitlist</div></div>
+    </div>
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
+      <div class="kpi"><div class="kpi-val blue">${o.dau}</div><div class="kpi-label">DAU (today)</div></div>
+      <div class="kpi"><div class="kpi-val blue">${o.wau}</div><div class="kpi-label">WAU (7 days)</div></div>
+      <div class="kpi"><div class="kpi-val blue">${o.mau}</div><div class="kpi-label">MAU (30 days)</div></div>
+    </div>
+    <div class="charts">
+      <div class="chart-card"><div class="chart-title">Daily Sessions (30 days)</div><div class="chart-bars" id="sChart"></div><div class="chart-x" id="sX"></div></div>
+      <div class="chart-card"><div class="chart-title">Daily Active Users (30 days)</div><div class="chart-bars" id="dChart"></div><div class="chart-x" id="dX"></div></div>
+    </div>
+    <div class="section"><div class="sec-title">Users <span class="badge">${d.users.length}</span></div>
+      <table class="tbl"><thead><tr><th>User</th><th>Status</th><th>Sessions</th><th>Focus</th><th>/Week</th><th>Last Active</th><th>Signed Up</th><th>30d Activity</th></tr></thead><tbody id="uRows"></tbody></table>
+    </div>
+    <div class="section"><div class="sec-title">Waitlist <span class="badge">${d.waitlist.length}</span></div><div id="wlItems"></div></div>
+    <div class="section"><div class="sec-title">Feedback <span class="badge">${d.feedback.length}</span></div><div id="fbItems"></div></div>
+  `;
+
+  renderBars('sChart','sX',d.charts.dailySessions);
+  renderBars('dChart','dX',d.charts.dailyActiveUsers);
+
+  const tb = document.getElementById('uRows');
+  d.users.forEach(u => {
+    const tr = document.createElement('tr');
+    const ago = u.daysSinceActive < 999 ? u.daysSinceActive + 'd ago' : 'Never';
+    const su = u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '?';
+    tr.innerHTML = `<td><div class="user-cell">${u.photo ? '<img src="'+u.photo+'">' : ''}<div><div class="user-name">${esc(u.name)}</div><div class="user-email">${esc(u.email)}</div></div></div></td><td><span class="status ${u.status}">${u.status}</span></td><td style="color:var(--tx)">${u.totalSessions}</td><td style="color:var(--tx)">${u.totalHours}h</td><td>${u.sessionsPerWeek}</td><td>${ago}</td><td>${su}</td><td>${spark(u.last30Days)}</td>`;
+    tb.appendChild(tr);
+  });
+
+  const wl = document.getElementById('wlItems');
+  wl.innerHTML = d.waitlist.length === 0 ? '<div class="empty">No one on waitlist</div>' : d.waitlist.map(w => `<div class="wl-item"><div><div class="wl-name">${esc(w.name||'Anon')}</div><div class="wl-email">${esc(w.email)}</div></div><div class="wl-date">${w.joinedAt?new Date(w.joinedAt).toLocaleDateString():''}</div></div>`).join('');
+
+  const fb = document.getElementById('fbItems');
+  fb.innerHTML = d.feedback.length === 0 ? '<div class="empty">No feedback</div>' : d.feedback.map(f => `<div class="fb-item"><div class="fb-text">${esc(f.text||f.message||JSON.stringify(f))}</div><div class="fb-meta">${f.createdAt?new Date(f.createdAt).toLocaleString():''}</div></div>`).join('');
+}
+
+function renderBars(bId, xId, data) {
+  const c = document.getElementById(bId), x = document.getElementById(xId);
+  const mx = Math.max(1, ...data.map(d => d.count));
+  data.forEach((d, i) => {
+    const b = document.createElement('div'); b.className = 'chart-bar';
+    b.style.height = (d.count / mx * 100) + '%'; b.dataset.val = d.count;
+    c.appendChild(b);
+    const s = document.createElement('span'); s.textContent = i % 5 === 0 ? d.date : '';
+    x.appendChild(s);
+  });
+}
+
+function spark(data) {
+  if (!data || !data.length) return '';
+  const mx = Math.max(1, ...data);
+  return '<div class="sparkline">' + data.map(v => `<div style="height:${Math.max(1,v/mx*20)}px;${v>0?'':'background:var(--bd)'}"></div>`).join('') + '</div>';
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+
+/* Admin management */
+async function addAdmin() {
+  const email = document.getElementById('newAdminEmail').value.trim();
+  if (!email) return;
+  try {
+    const r = await fetch('/api/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'add_admin', email }) });
+    const d = await r.json();
+    if (d.success) { loadDashboard(); } else { alert(d.error || 'Failed'); }
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function removeAdmin(email) {
+  if (!confirm('Remove admin access for ' + email + '?')) return;
+  try {
+    const r = await fetch('/api/admin', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'remove_admin', email }) });
+    const d = await r.json();
+    if (d.success) { loadDashboard(); } else { alert(d.error || 'Failed'); }
+  } catch (e) { alert('Error: ' + e.message); }
+}
+
+/* Init: check if already logged in */
+(async function() {
+  try {
+    const r = await fetch('/api/auth');
+    const d = await r.json();
+    if (d.authenticated && d.user) { enterDash(d.user); return; }
+  } catch (e) {}
+  initGoogle();
+})();
+</script>
+</body>
+</html>
