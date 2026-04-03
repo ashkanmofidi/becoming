@@ -27,7 +27,7 @@ function sanitizeData(data, maxSize = 1000000) {
 }
 
 async function authenticateSession(req) {
-  const cookies = req.headers.get('cookie') || '';
+  const cookies = req.headers.cookie || '';
   const sessionToken = getCookie('bm_sid', cookies);
 
   if (!sessionToken) {
@@ -46,7 +46,7 @@ async function authenticateSession(req) {
   }
 }
 
-async function handleGET(req, email) {
+async function handleGET(res, email) {
   try {
     const [settings, sessions, timerState] = await Promise.all([
       kv.get(`user:${email}:settings`),
@@ -54,24 +54,18 @@ async function handleGET(req, email) {
       kv.get(`user:${email}:timerState`)
     ]);
 
-    return new Response(JSON.stringify({
+    return res.status(200).json({
       settings: settings || null,
       sessions: sessions || [],
       timerState: timerState || null
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
   } catch (e) {
     console.error('GET sessions error:', e);
-    return new Response(JSON.stringify({ error: 'Server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
-async function handlePOST(req, email, body) {
+async function handlePOST(res, email, body) {
   try {
     // Handle sessions + settings sync
     if (body.sessions !== undefined && body.settings !== undefined) {
@@ -83,10 +77,7 @@ async function handlePOST(req, email, body) {
         kv.setex(`user:${email}:settings`, COOKIE_MAX_AGE, JSON.stringify(body.settings))
       ]);
 
-      return new Response('', {
-        status: 204,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(204).end();
     }
 
     // Handle timerState push/clear
@@ -97,10 +88,7 @@ async function handlePOST(req, email, body) {
       } else {
         // Validate timer state structure
         if (typeof body.timerState !== 'object') {
-          return new Response(JSON.stringify({ error: 'Invalid timerState' }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' }
-          });
+          return res.status(400).json({ error: 'Invalid timerState' });
         }
 
         sanitizeData(body.timerState);
@@ -112,70 +100,46 @@ async function handlePOST(req, email, body) {
         );
       }
 
-      return new Response('', {
-        status: 204,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(204).end();
     }
 
-    return new Response(JSON.stringify({ error: 'Invalid request body' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(400).json({ error: 'Invalid request body' });
   } catch (e) {
     console.error('POST sessions error:', e);
 
     if (e.message.includes('exceeds maximum size')) {
-      return new Response(JSON.stringify({ error: 'Data too large' }), {
-        status: 413,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(413).json({ error: 'Data too large' });
     }
 
-    return new Response(JSON.stringify({ error: 'Server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
-export default async function handler(req) {
+export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const email = await authenticateSession(req);
 
   if (!email) {
-    return new Response(JSON.stringify({ error: 'Not authenticated' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(401).json({ error: 'Not authenticated' });
   }
 
   if (!validateEmail(email)) {
-    return new Response(JSON.stringify({ error: 'Invalid email' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(400).json({ error: 'Invalid email' });
   }
 
   if (req.method === 'GET') {
-    return await handleGET(req, email);
+    return await handleGET(res, email);
   }
 
   if (req.method === 'POST') {
     try {
-      const body = await req.json();
-      return await handlePOST(req, email, body);
+      const body = req.body || {};
+      return await handlePOST(res, email, body);
     } catch (e) {
-      return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(400).json({ error: 'Invalid JSON' });
     }
   }
 }

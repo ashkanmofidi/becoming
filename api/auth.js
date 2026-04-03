@@ -126,69 +126,59 @@ async function addUserToBeta(email, name, picture) {
   }
 }
 
-async function handleGET(req) {
-  const cookies = req.headers.get('cookie') || '';
+async function handleGET(res) {
+  return res.status(200).json({
+    authenticated: false,
+    user: null,
+    disclaimerVersion: null
+  });
+}
+
+async function handleGETWithSession(req, res) {
+  const cookies = req.headers.cookie || '';
   const sessionToken = getCookie('bm_sid', cookies);
 
   if (!sessionToken) {
-    return new Response(JSON.stringify({
+    return res.status(200).json({
       authenticated: false,
       user: null,
       disclaimerVersion: null
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
   }
 
   try {
     const session = await kv.get(`session:${sessionToken}`);
     if (!session) {
-      return new Response(JSON.stringify({
+      return res.status(200).json({
         authenticated: false,
         user: null,
         disclaimerVersion: null
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    return new Response(JSON.stringify({
+    return res.status(200).json({
       authenticated: true,
       user: session.user,
       disclaimerVersion: session.disclaimerVersion || null
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
   } catch (e) {
     console.error('Session retrieval error:', e);
-    return new Response(JSON.stringify({
+    return res.status(200).json({
       authenticated: false,
       user: null,
       disclaimerVersion: null
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
     });
   }
 }
 
-async function handlePOSTLogin(req, body) {
+async function handlePOSTLogin(req, res, body) {
   if (!body.credential) {
-    return new Response(JSON.stringify({ error: 'Missing credential' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(400).json({ error: 'Missing credential' });
   }
 
   const user = await validateGoogleToken(body.credential);
   if (!user) {
-    return new Response(JSON.stringify({ error: 'Invalid token' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(401).json({ error: 'Invalid token' });
   }
 
   try {
@@ -205,28 +195,22 @@ async function handlePOSTLogin(req, body) {
           joinedAt: new Date().toISOString()
         });
 
-        return new Response(JSON.stringify({
+        return res.status(200).json({
           authenticated: false,
           waitlist: true,
           user: null,
           disclaimerVersion: null
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
         });
       }
 
       // Accept user as beta
       const success = await addUserToBeta(user.email, user.name, user.picture);
       if (!success) {
-        return new Response(JSON.stringify({
+        return res.status(200).json({
           authenticated: false,
           waitlist: true,
           user: null,
           disclaimerVersion: null
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
         });
       }
     }
@@ -248,85 +232,56 @@ async function handlePOSTLogin(req, body) {
 
     await kv.setex(`session:${sessionToken}`, COOKIE_MAX_AGE, JSON.stringify(session));
 
-    // Also set user ID cookie
-    const userIdToken = Buffer.from(user.email).toString('base64');
-
-    const cookies = [
+    // Set cookies using proper Node.js response headers
+    res.setHeader('Set-Cookie', [
       setCookie('bm_sid', sessionToken),
-      setCookie('bm_uid', userIdToken)
-    ];
+      setCookie('bm_uid', Buffer.from(user.email).toString('base64'))
+    ]);
 
-    return new Response(JSON.stringify({
+    return res.status(200).json({
       authenticated: true,
       waitlist: false,
       user: session.user,
       disclaimerVersion: null
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Set-Cookie': cookies
-      }
     });
   } catch (e) {
     console.error('Login error:', e);
-    return new Response(JSON.stringify({ error: 'Server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
 
-async function handlePOSTAction(req, body) {
-  const cookies = req.headers.get('cookie') || '';
+async function handlePOSTAction(req, res, body) {
+  const cookies = req.headers.cookie || '';
   const sessionToken = getCookie('bm_sid', cookies);
 
   if (!sessionToken) {
-    return new Response(JSON.stringify({ error: 'Not authenticated' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(401).json({ error: 'Not authenticated' });
   }
 
   if (body.action === 'accept_disclaimer') {
     if (!body.version) {
-      return new Response(JSON.stringify({ error: 'Missing version' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(400).json({ error: 'Missing version' });
     }
 
     try {
       const session = await kv.get(`session:${sessionToken}`);
       if (!session) {
-        return new Response(JSON.stringify({ error: 'Invalid session' }), {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return res.status(401).json({ error: 'Invalid session' });
       }
 
       session.disclaimerVersion = body.version;
       await kv.setex(`session:${sessionToken}`, COOKIE_MAX_AGE, JSON.stringify(session));
 
-      return new Response('', {
-        status: 204,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(204).end();
     } catch (e) {
       console.error('Disclaimer acceptance error:', e);
-      return new Response(JSON.stringify({ error: 'Server error' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(500).json({ error: 'Server error' });
     }
   }
 
   if (body.action === 'join_waitlist') {
     if (!body.email || !body.name) {
-      return new Response(JSON.stringify({ error: 'Missing email or name' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(400).json({ error: 'Missing email or name' });
     }
 
     try {
@@ -337,92 +292,72 @@ async function handlePOSTAction(req, body) {
         joinedAt: new Date().toISOString()
       });
 
-      return new Response('', {
-        status: 204,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(204).end();
     } catch (e) {
       console.error('Waitlist join error:', e);
-      return new Response(JSON.stringify({ error: 'Server error' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(500).json({ error: 'Server error' });
     }
   }
 
-  return new Response(JSON.stringify({ error: 'Unknown action' }), {
-    status: 400,
-    headers: { 'Content-Type': 'application/json' }
-  });
+  return res.status(400).json({ error: 'Unknown action' });
 }
 
-async function handleDELETE(req) {
-  const cookies = req.headers.get('cookie') || '';
+async function handleDELETE(req, res) {
+  const cookies = req.headers.cookie || '';
   const sessionToken = getCookie('bm_sid', cookies);
 
-  if (!sessionToken) {
-    return new Response('', {
-      status: 204,
-      headers: {
-        'Set-Cookie': [clearCookie('bm_sid'), clearCookie('bm_uid')]
-      }
-    });
-  }
-
   try {
-    await kv.del(`session:${sessionToken}`);
+    if (sessionToken) {
+      await kv.del(`session:${sessionToken}`);
+    }
   } catch (e) {
     console.error('Session deletion error:', e);
   }
 
-  return new Response('', {
-    status: 204,
-    headers: {
-      'Set-Cookie': [clearCookie('bm_sid'), clearCookie('bm_uid')]
-    }
-  });
+  res.setHeader('Set-Cookie', [
+    clearCookie('bm_sid'),
+    clearCookie('bm_uid')
+  ]);
+
+  return res.status(204).end();
 }
 
 export default async function handler(req, res) {
-  const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+  const clientIp = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown';
 
   if (!rateLimit(clientIp)) {
-    return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
-      status: 429,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(429).json({ error: 'Rate limit exceeded' });
   }
 
   try {
     if (req.method === 'GET') {
-      return await handleGET(req);
+      return await handleGETWithSession(req, res);
     }
 
     if (req.method === 'POST') {
-      const body = await req.json().catch(() => ({}));
+      let body = {};
+      try {
+        body = req.body || {};
+      } catch (e) {
+        // Body parse error, continue with empty body
+      }
 
       // If credential field exists, it's a login request
       if (body.credential) {
-        return await handlePOSTLogin(req, body);
+        return await handlePOSTLogin(req, res, body);
       }
 
       // Otherwise it's an action request
-      return await handlePOSTAction(req, body);
+      return await handlePOSTAction(req, res, body);
     }
 
     if (req.method === 'DELETE') {
-      return await handleDELETE(req);
+      return await handleDELETE(req, res);
     }
 
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(405).json({ error: 'Method not allowed' });
   } catch (e) {
     console.error('Auth handler error:', e);
-    return new Response(JSON.stringify({ error: 'Server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(500).json({ error: 'Server error' });
   }
 }

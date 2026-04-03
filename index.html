@@ -16,6 +16,7 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%2308080A' width='180' height='180'/><circle cx='90' cy='90' r='85' fill='none' stroke='%23D97706' stroke-width='8'/><text x='90' y='100' font-family='serif' font-size='60' fill='%23D97706' text-anchor='middle'>.</text></svg>">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Fraunces:wght@300;400;600&display=swap" rel="stylesheet">
   <title>Becoming... - Focus Timer</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 
   <style>
 :root{
@@ -1451,20 +1452,32 @@ function initializeGoogleSignIn() {
   fetch('/api/config')
     .then(r => r.json())
     .then(d => {
-      if (window.google && window.google.accounts) {
-        google.accounts.id.initialize({
-          client_id: d.clientId,
-          callback: handleGoogleCredential,
-          auto_select: false
-        });
-        google.accounts.id.renderButton(document.getElementById('gSignIn'), {
-          type: 'standard',
-          size: 'large',
-          locale: 'en'
-        });
+      function tryRenderGoogle(attempts) {
+        if (window.google && window.google.accounts) {
+          google.accounts.id.initialize({
+            client_id: d.clientId,
+            callback: handleGoogleCredential,
+            auto_select: false
+          });
+          google.accounts.id.renderButton(document.getElementById('gSignIn'), {
+            type: 'standard',
+            size: 'large',
+            locale: 'en'
+          });
+        } else if (attempts < 20) {
+          setTimeout(() => tryRenderGoogle(attempts + 1), 250);
+        } else {
+          const errEl = document.getElementById('authErr');
+          if (errEl) errEl.textContent = 'Failed to load Google Sign-In. Please refresh the page.';
+        }
       }
+      tryRenderGoogle(0);
     })
-    .catch(e => console.error('Google init failed:', e));
+    .catch(e => {
+      console.error('Google init failed:', e);
+      const errEl = document.getElementById('authErr');
+      if (errEl) errEl.textContent = 'Unable to connect to server. Please try again.';
+    });
 }
 
 function handleGoogleCredential(response) {

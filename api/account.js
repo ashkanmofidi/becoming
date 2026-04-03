@@ -22,7 +22,7 @@ function validateEmail(email) {
 }
 
 async function authenticateSession(req) {
-  const cookies = req.headers.get('cookie') || '';
+  const cookies = req.headers.cookie || '';
   const sessionToken = getCookie('bm_sid', cookies);
 
   if (!sessionToken) {
@@ -41,30 +41,21 @@ async function authenticateSession(req) {
   }
 }
 
-export default async function handler(req) {
+export default async function handler(req, res) {
   if (req.method !== 'DELETE') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const auth = await authenticateSession(req);
 
   if (!auth) {
-    return new Response(JSON.stringify({ error: 'Not authenticated' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(401).json({ error: 'Not authenticated' });
   }
 
   const { email, sessionToken } = auth;
 
   if (!validateEmail(email)) {
-    return new Response(JSON.stringify({ error: 'Invalid email' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(400).json({ error: 'Invalid email' });
   }
 
   try {
@@ -81,25 +72,20 @@ export default async function handler(req) {
       keysToDelete.map(key => kv.del(key).catch(e => console.error(`Error deleting ${key}:`, e)))
     );
 
-    return new Response(JSON.stringify({
-      success: true,
-      message: 'Account deleted'
-    }), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Set-Cookie': [clearCookie('bm_sid'), clearCookie('bm_uid')]
-      }
+    res.setHeader('Set-Cookie', [
+      clearCookie('bm_sid'),
+      clearCookie('bm_uid')
+    ]);
+
+    return res.status(200).json({
+      success: true
     });
   } catch (e) {
     console.error('Account deletion error:', e);
 
-    return new Response(JSON.stringify({
+    return res.status(500).json({
       success: false,
       error: 'Server error'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
     });
   }
 }

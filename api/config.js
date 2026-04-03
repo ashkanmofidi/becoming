@@ -1,25 +1,14 @@
 export default function handler(req, res) {
   if (req.method !== 'GET') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
 
   if (!clientId) {
-    return new Response(JSON.stringify({ error: 'Configuration missing' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(500).json({ error: 'Configuration missing' });
   }
 
-  return new Response(JSON.stringify({ clientId }), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'public, max-age=3600'
-    }
-  });
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  return res.status(200).json({ clientId });
 }

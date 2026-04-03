@@ -23,7 +23,7 @@ function sanitizeText(text, maxLength = 5000) {
 }
 
 async function authenticateSession(req) {
-  const cookies = req.headers.get('cookie') || '';
+  const cookies = req.headers.cookie || '';
   const sessionToken = getCookie('bm_sid', cookies);
 
   if (!sessionToken) {
@@ -42,58 +42,43 @@ async function authenticateSession(req) {
   }
 }
 
-export default async function handler(req) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   const email = await authenticateSession(req);
 
   if (!email) {
-    return new Response(JSON.stringify({ error: 'Not authenticated' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(401).json({ error: 'Not authenticated' });
   }
 
   if (!validateEmail(email)) {
-    return new Response(JSON.stringify({ error: 'Invalid email' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(400).json({ error: 'Invalid email' });
   }
 
   try {
-    const body = await req.json();
+    const body = req.body || {};
 
     // Validate feedback structure
     if (!body.type || !body.message) {
-      return new Response(JSON.stringify({ error: 'Missing type or message' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(400).json({ error: 'Missing type or message' });
     }
 
     const type = sanitizeText(body.type, 100);
     const message = sanitizeText(body.message, 5000);
 
     if (!type || !message) {
-      return new Response(JSON.stringify({ error: 'Type and message cannot be empty' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(400).json({ error: 'Type and message cannot be empty' });
     }
 
     const feedback = {
       email,
       type,
       message,
-      userAgent: req.headers.get('user-agent') || 'unknown',
+      userAgent: req.headers['user-agent'] || 'unknown',
       timestamp: new Date().toISOString(),
-      ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
+      ip: req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown'
     };
 
     // Store in feedback list and by user email
@@ -104,23 +89,14 @@ export default async function handler(req) {
       kv.setex(`feedback:${feedbackId}`, COOKIE_MAX_AGE, JSON.stringify(feedback))
     ]);
 
-    return new Response('', {
-      status: 204,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(204).end();
   } catch (e) {
     console.error('Feedback submission error:', e);
 
     if (e instanceof SyntaxError) {
-      return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return res.status(400).json({ error: 'Invalid JSON' });
     }
 
-    return new Response(JSON.stringify({ error: 'Server error' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(500).json({ error: 'Server error' });
   }
 }
