@@ -80,6 +80,7 @@ export default function TimerPage() {
   // Audio
   const audio = useAudio(settings);
   const lastTickedSecondRef = useRef(-1);
+  const lastTickTimeRef = useRef(0);
 
   // Timer hook
   const {
@@ -108,7 +109,13 @@ export default function TimerPage() {
       // PRD 5.7.1: Ticks fire exactly once per second, not on every render frame
       const currentSecond = Math.floor(remaining);
       if (currentSecond === lastTickedSecondRef.current) return;
+
+      // Enforce minimum 800ms between ticks to prevent double-tick on start
+      const now = Date.now();
+      if (now - lastTickTimeRef.current < 800) return;
+
       lastTickedSecondRef.current = currentSecond;
+      lastTickTimeRef.current = now;
 
       const isFocus = state?.mode === 'focus';
       const isBreak = state?.mode === 'break' || state?.mode === 'long_break';
@@ -188,6 +195,10 @@ export default function TimerPage() {
 
   // Handlers
   const handlePlay = useCallback(async () => {
+    // Reset tick refs to prevent stale state causing double-tick on start
+    lastTickedSecondRef.current = -1;
+    lastTickTimeRef.current = Date.now(); // Suppress tick for first 800ms (activation chime covers it)
+
     await audio.ensureInitialized();
     audio.playActivation();
     if (settings?.ambientSound && settings.ambientSound !== 'none' && state?.mode === 'focus') {
