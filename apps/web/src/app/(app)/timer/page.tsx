@@ -30,12 +30,10 @@ export default function TimerPage() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [intent, setIntent] = useState('');
   const [category, setCategory] = useState('General');
-  const [isMuted, setIsMuted] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('bm_muted') === 'true';
-    }
-    return false;
-  });
+  // Mute state comes from persisted settings — single source of truth.
+  // No localStorage, no component state. Both timer and settings page
+  // read/write the same settings.muted field.
+  const isMuted = settings?.muted ?? false;
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -418,14 +416,28 @@ export default function TimerPage() {
 
       {/* Mute toggle — prominent, persistent, one source of truth */}
       <button
-        onClick={() => {
+        onClick={async () => {
           const next = !isMuted;
-          setIsMuted(next);
-          localStorage.setItem('bm_muted', String(next));
+          // Write to persisted settings — single source of truth
+          if (settings) {
+            const updated = { ...settings, muted: next };
+            setSettings(updated);
+            fetch('/api/settings', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ settings: updated }),
+            }).catch(() => {});
+          }
           if (next) {
             stopTick(); audio.stopAmbient();
-          } else if (settings?.ambientSound && settings.ambientSound !== 'none' && state?.status === 'running' && state?.mode === 'focus') {
-            audio.startAmbient();
+          } else {
+            // Unmuting: resume tick if session is running with tick enabled
+            const tickIsOn = (state?.mode === 'focus' && settings?.tickDuringFocus) ||
+              (state?.mode !== 'focus' && settings?.tickDuringBreaks);
+            if (state?.status === 'running' && tickIsOn) startTick();
+            if (settings?.ambientSound && settings.ambientSound !== 'none' && state?.status === 'running' && state?.mode === 'focus') {
+              audio.startAmbient();
+            }
           }
         }}
         className={`

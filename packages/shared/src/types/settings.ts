@@ -24,6 +24,7 @@ export interface UserSettings {
   streakCalculation: 'one_session' | 'meet_goal' | 'open_app';
   streakFreezePerMonth: number;
   confirmLogoutWithActiveTimer: boolean;
+  muted: boolean;
 
   // Display (Section 6.3)
   theme: 'dark' | 'light' | 'system';

@@ -180,6 +180,7 @@ export default function SettingsPage() {
 
         {/* Sound (PRD 6.4) */}
         <SettingsCard title="Sound">
+          <Toggle label="Mute All Sounds" description="Silences everything — same as the mute button on the timer" enabled={settings.muted} onChange={(v) => update('muted', v)} />
           <Select label="Sound Theme" value={settings.soundTheme} onChange={(v) => update('soundTheme', v as UserSettings['soundTheme'])} options={[
             { value: 'warm', label: 'Warm' },
             { value: 'minimal', label: 'Minimal' },

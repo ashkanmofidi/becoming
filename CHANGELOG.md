@@ -1,5 +1,18 @@
 # Changelog
 
+## v3.1.15 (2026-04-09) - Unified Sound Toggle
+
+### Fixed
+- Timer page mute button and Settings page sound controls were out of sync. Timer used localStorage (`bm_muted`), Settings used KV (`soundTheme`/`masterVolume`). Four separate mute states existed across the codebase.
+- Now: single `muted` boolean in UserSettings, persisted to KV. Both pages read/write the same field. No localStorage, no component state for mute.
+
+### Changed
+- Added `muted: boolean` to UserSettings type (default: false).
+- Timer page mute button writes to `settings.muted` via PUT /api/settings.
+- Settings page: added "Mute All Sounds" toggle at top of Sound section.
+- Removed localStorage `bm_muted` — all mute state lives in persisted settings.
+- When either toggle changes, the other reflects it on next render (same data source).
+
 ## v3.1.14 (2026-04-09) - Tick Rebuilt from Scratch + Login Timer Reset
 
 ### Changed (BREAKING: tick architecture)

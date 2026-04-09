@@ -24,6 +24,7 @@ export const BEHAVIOR_DEFAULTS = {
   STREAK_CALCULATION: 'one_session' as const,
   STREAK_FREEZE_PER_MONTH: 2,
   CONFIRM_LOGOUT_WITH_ACTIVE_TIMER: true,
+  MUTED: false,
 } as const;
 
 export const DISPLAY_DEFAULTS = {
