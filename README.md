@@ -1,55 +1,57 @@
-# Becoming...
+# Becoming.. Enterprise Focus Timer
 
-Enterprise-grade focus timer with cross-device sync, session analytics, and cloud persistence.
-
-## Stack
-
-- **Frontend:** Single HTML file (vanilla JS, no build step)
-- **Backend:** Vercel Serverless Functions (Node.js)
-- **Database:** Vercel KV (Redis)
-- **Auth:** Google OAuth 2.0
-- **Hosting:** Vercel
+> Enterprise-grade Pomodoro focus timer with analytics, streaks, and team management.
 
 ## Architecture
 
+Modular monorepo with clean service boundaries, built for Vercel deployment.
+
 ```
-public/index.html    — Full app (CSS + HTML + JS in one file)
-api/auth.js          — Google OAuth, session cookies, user management
-api/sessions.js      — CRUD for sessions, settings, and timer state
-api/config.js        — Public config (client ID)
-api/feedback.js      — User feedback collection
-api/account.js       — Account deletion
-api/admin.js         — Admin dashboard (user list, waitlist, feedback)
+becoming/
+├── packages/shared/    # Types, constants, utilities
+├── apps/web/           # Next.js 14+ App Router
+│   ├── src/app/        # Pages and API routes
+│   ├── src/services/   # Business logic
+│   ├── src/repositories/ # Data access (Vercel KV)
+│   └── src/hooks/      # React hooks
+└── apps/tests/         # Test suites
 ```
 
-## Cross-Device Timer Sync
+## Tech Stack
 
-Each device gets a unique fingerprint stored in localStorage. When the timer starts, pauses, or resets, the state is pushed to Vercel KV. Other devices pull this state every 10 seconds and on tab focus. Conflict resolution: if local timer is running, local wins. Otherwise, the latest `serverTs` from any other device is adopted.
+- **Runtime**: Next.js 14+ (App Router) on Vercel
+- **Language**: TypeScript (strict mode)
+- **Styling**: Tailwind CSS 3+
+- **Data**: Vercel KV (Redis-compatible)
+- **Auth**: Google OAuth 2.0 with PKCE
+- **Charts**: Recharts
+- **Animations**: Framer Motion
+- **Audio**: Web Audio API
+- **Testing**: Vitest, Playwright, k6, axe-core
 
-## Environment Variables
-
-| Variable | Description |
-|----------|-------------|
-| `GOOGLE_CLIENT_ID` | Google OAuth 2.0 Client ID |
-| `ADMIN_EMAIL` | Email for admin access |
-| `SESSION_SECRET` | Secret for cookie signing |
-| `MAX_USERS` | Beta user cap (default: 10) |
-| `KV_REST_API_URL` | Auto-set by Vercel KV |
-| `KV_REST_API_TOKEN` | Auto-set by Vercel KV |
-
-## Local Development
+## Getting Started
 
 ```bash
 npm install
-npx vercel dev
+npm run dev
 ```
 
-## Deploy
+## Environment Variables
 
-```bash
-npx vercel --yes --prod
+```
+GOOGLE_CLIENT_ID=115795527932-2q1afagsog0eg29pbdfn3qfs44e27uui.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=<secret>
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=115795527932-2q1afagsog0eg29pbdfn3qfs44e27uui.apps.googleusercontent.com
+APP_URL=https://becoming.ashmofidi.com
+KV_URL=<vercel-kv-url>
+KV_REST_API_URL=<vercel-kv-rest-url>
+KV_REST_API_TOKEN=<vercel-kv-token>
+KV_REST_API_READ_ONLY_TOKEN=<vercel-kv-read-only-token>
+APP_VERSION=3.1.0
+APP_LIFECYCLE_STAGE=ENTERPRISE BETA
+CURRENT_TOS_VERSION=1.0
 ```
 
-## License
+## Version
 
-Private. All rights reserved.
+v3.1.0 · Enterprise Beta · April 2026

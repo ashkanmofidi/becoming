@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --scale: 1;
+  --accent: #D97706;
+  --break-accent: #0D9488;
+}
+
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background-color: #0A0A0A;
+  color: #EDECE8;
+}
+
+.font-size-small { --scale: 0.85; }
+.font-size-normal { --scale: 1; }
+.font-size-large { --scale: 1.2; }
+.font-size-xl { --scale: 1.5; }
+
+/* Timer flip-clock animation */
+.flip-digit {
+  transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #1A1A1A;
+}
+::-webkit-scrollbar-thumb {
+  background: #3A3A3A;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6B7280;
+}
