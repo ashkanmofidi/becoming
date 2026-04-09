@@ -7,7 +7,9 @@ import { APP_DEFAULTS } from '@becoming/shared';
 import { createLogger } from '../lib/logger';
 
 const logger = createLogger('auth-service');
-const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
+// Hard 3-day session expiry — no sliding window.
+// User must re-authenticate every 3 days regardless of activity.
+const SESSION_MAX_AGE_SECONDS = 3 * 24 * 60 * 60; // 3 days
 const GOOGLE_CLIENT_ID = '115795527932-2q1afagsog0eg29pbdfn3qfs44e27uui.apps.googleusercontent.com';
 
 /**
@@ -202,24 +204,29 @@ export const authService = {
   },
 
   /**
-   * Validate and extend session. PRD: sliding 30-day expiry.
+   * Validate session with hard 3-day cutoff from original login.
+   * No sliding window — createdAt is the only reference point.
+   * Applies to all users including Super Admin.
    */
   async validateSession(token: string): Promise<AuthSession | null> {
     const session = await kvClient.get<AuthSession>(keys.authSession(token));
     if (!session) return null;
 
-    if (new Date(session.expiresAt) < new Date()) {
+    // Hard 3-day cutoff from creation — not from last activity
+    const createdAt = new Date(session.createdAt).getTime();
+    const now = Date.now();
+    if (now - createdAt > SESSION_MAX_AGE_SECONDS * 1000) {
       await kvClient.del(keys.authSession(token));
       return null;
     }
 
-    // Extend session (sliding window)
+    // Update last activity for analytics (but don't extend expiry)
     session.lastActivityAt = new Date().toISOString();
-    session.expiresAt = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000).toISOString();
     await kvClient.set(
       keys.authSession(token),
       session as unknown as Record<string, unknown>,
-      { ex: SESSION_MAX_AGE_SECONDS },
+      // KV TTL still set to 3 days from creation as a safety net
+      { ex: Math.max(1, Math.floor((createdAt + SESSION_MAX_AGE_SECONDS * 1000 - now) / 1000)) },
     );
 
     return session;

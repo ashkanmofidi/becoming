@@ -44,7 +44,7 @@ If user navigates directly to any authenticated route (e.g., /dashboard) without
 11. User redirected to Timer page (or TOS screen if first login or version mismatch).
 1.2.2 Session Management
 Sessions stored server-side. Key: auth:session:{token}. Value: userId, email, name, role, createdAt, expiresAt, lastActivityAt, deviceInfo.
-Expiry: 30 days from creation, extended by 30 days on each authenticated request (sliding).
+Expiry: [CHANGED v3.1.6 - 2026-04-09] Hard 3-day cutoff from original login moment. No sliding window. On every API call, server checks `now - createdAt > 3 days`. If expired: session deleted, cookie cleared, redirect to login with "Session expired, please log in again." Applies to ALL users including Super Admin.
 Google access_token NOT stored long-term. refresh_token stored encrypted for future integrations (Calendar).
 Missing/expired session: redirect to login with toast: "Your session has expired. Please sign in again."
 Multiple simultaneous sessions allowed (multi-device). No max sessions limit. Each device gets its own token.

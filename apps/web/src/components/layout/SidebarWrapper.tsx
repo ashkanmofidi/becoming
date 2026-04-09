@@ -17,9 +17,16 @@ export function SidebarWrapper() {
 
   useEffect(() => {
     fetch('/api/auth/session')
-      .then((res) => res.json())
+      .then((res) => {
+        if (res.status === 401) {
+          // Session expired (hard 3-day cutoff) — force logout and redirect
+          window.location.href = '/login?error=session_expired';
+          return null;
+        }
+        return res.json();
+      })
       .then((data) => {
-        if (data.authenticated && data.user) {
+        if (data?.authenticated && data.user) {
           setUser(data.user);
         }
       })

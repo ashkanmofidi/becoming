@@ -40,12 +40,13 @@ interface UseTimerReturn {
  */
 export function useTimer(options: UseTimerOptions): UseTimerReturn {
   const [state, setState] = useState<TimerState | null>(null);
-  const [remainingSeconds, setRemainingSeconds] = useState(25 * 60); // Default to 25:00 until server state loads
+  const [remainingSeconds, setRemainingSeconds] = useState(25 * 60);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const deviceIdRef = useRef(getOrCreateDeviceId());
   const tickIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const heartbeatIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const completingRef = useRef(false); // Guard against multiple complete calls
 
   const deviceId = deviceIdRef.current;
 
@@ -63,6 +64,7 @@ export function useTimer(options: UseTimerOptions): UseTimerReturn {
     if (tickIntervalRef.current) clearInterval(tickIntervalRef.current);
 
     if (state?.status === 'running' && state.startedAt) {
+      completingRef.current = false; // Reset guard on fresh running state
       tickIntervalRef.current = setInterval(() => {
         const remaining = calculateRemainingSeconds(
           state.startedAt!,
@@ -71,7 +73,9 @@ export function useTimer(options: UseTimerOptions): UseTimerReturn {
         setRemainingSeconds(remaining);
         options.onTick?.(remaining);
 
-        if (remaining <= 0 && state.status === 'running') {
+        // Complete: guard against multiple calls (interval fires every 100ms)
+        if (remaining <= 0 && !completingRef.current) {
+          completingRef.current = true;
           apiCall('complete', {});
         }
       }, 100);

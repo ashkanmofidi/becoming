@@ -1,5 +1,22 @@
 # Changelog
 
+## v3.1.6 (2026-04-09) - Completion Recording + 3-Day Session Expiry
+
+### Fixed
+- Timer completion called multiple times: setInterval (100ms) hit `remaining <= 0` repeatedly before state updated. Added `completingRef` guard — completion fires exactly once.
+- Session completion data flow verified end-to-end: timer complete → timerService.finalizeSession → sessionRepo.create → fetchTodaySessions updates daily goal/cycle → dashboard/session-log read from same source.
+
+### Added  
+- Hard 3-day session expiry: sessions expire exactly 3 days after login, regardless of activity. No sliding window. Checked against `createdAt` on every API call. Applies to all users including Super Admin.
+- "Session expired, please log in again" message on forced logout redirect.
+- Client-side expiry detection: SidebarWrapper checks 401 from /api/auth/session and redirects to login.
+
+### Changed
+- SESSION_MAX_AGE_SECONDS: 30 days → 3 days
+- validateSession: checks `now - createdAt > 3 days` instead of sliding `expiresAt`
+- Cookie maxAge: 30 days → 3 days
+- KV TTL: set to remaining time until 3-day cutoff (not reset on activity)
+
 ## v3.1.5 (2026-04-09) - Tick Sound Survives Navigation
 
 ### Fixed

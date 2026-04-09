@@ -9,7 +9,15 @@ const GOOGLE_CLIENT_ID = '115795527932-2q1afagsog0eg29pbdfn3qfs44e27uui.apps.goo
  * Simplified OAuth flow (no PKCE — we have a server-side client_secret).
  */
 export default function LoginPage() {
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('error') === 'session_expired') {
+        return 'Session expired, please log in again.';
+      }
+    }
+    return null;
+  });
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGoogleSignIn = useCallback(() => {

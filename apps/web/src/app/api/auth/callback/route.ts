@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       secure: true,
       sameSite: 'lax', // Changed from 'strict' — needs to work on redirect from Google
       path: '/',
-      maxAge: 30 * 24 * 60 * 60,
+      maxAge: 3 * 24 * 60 * 60, // Hard 3-day expiry, matches server-side check
     });
 
     return response;
