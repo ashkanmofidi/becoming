@@ -202,37 +202,37 @@ export function playResumeSound(theme: SoundTheme): void {
 }
 
 /**
- * Play tick sound — water drop "blip."
- * Sine wave starting at a higher pitch that drops quickly.
- * Calm, zen-like, non-intrusive.
+ * Play tick sound — soft water drop.
+ * A gentle, round "plop" like a single raindrop hitting a still pond.
+ * Low pitch, smooth sine, long gentle fade. Barely there.
  */
-export function playTick(volume = 0.08): void {
+export function playTick(volume = 0.04): void {
   if (!state.context || !state.masterGain) return;
 
   const ctx = state.context;
   const now = ctx.currentTime;
+
+  // Main drop tone — low, round, soft
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
-
   osc.type = 'sine';
-  // Water drop: start high, pitch drops rapidly
-  osc.frequency.setValueAtTime(1800, now);
-  osc.frequency.exponentialRampToValueAtTime(400, now + 0.06);
+  osc.frequency.setValueAtTime(600, now); // Start at a soft mid tone
+  osc.frequency.exponentialRampToValueAtTime(200, now + 0.2); // Slow gentle pitch fall
 
   gain.gain.setValueAtTime(volume, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+  gain.gain.setTargetAtTime(0, now + 0.05, 0.1); // Quick onset, long soft tail
 
   osc.connect(gain);
   gain.connect(state.masterGain);
   osc.start(now);
-  osc.stop(now + 0.15);
+  osc.stop(now + 0.4);
 }
 
 /**
- * Play last-30s tick — slightly louder water drop.
+ * Play last-30s tick — same soft water drop, slightly more present.
  */
 export function playLast30sTick(): void {
-  playTick(0.12);
+  playTick(0.07);
 }
 
 /**

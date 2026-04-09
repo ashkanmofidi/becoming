@@ -237,6 +237,7 @@ Tick During Focus: when ON, plays a soft tick sound EVERY SECOND during focus co
 Tick During Breaks: when ON, plays the same tick every second during break countdown. Default OFF.
 Last 30s Ticking: when ON, plays a slightly louder tick every second during the FINAL 30 seconds of any countdown (focus or break). Independent of the focus/break tick toggles. Default ON.
 CRITICAL IMPLEMENTATION: Ticks must fire exactly once per second, not on every render frame. Track the last tick second and only play when the integer second changes.
+SOUND DESIGN [CHANGED v3.1.1 - 2026-04-09]: Tick sound is a soft water drop — sine wave starting at 600Hz falling gently to 200Hz over 200ms, volume 4%, with a quick onset and long soft tail (like a raindrop on a still pond). Must be barely audible, calming, and non-intrusive. Last 30s tick is the same sound at 7% volume.
 5.7.2 Ambient Sound + Tick Interaction [ADDED v3.1.1 - 2026-04-09]
 FEATURE INTERACTION: Ambient Sound ON + Tick During Focus ON: both play simultaneously (they layer). However, the UX recommendation is that users who enable ambient sound typically want immersion — the tick can break that. The UI should show a hint: "Tip: Ambient sound works best without ticking enabled" when both are on. No auto-disable — let the user choose.
 FEATURE INTERACTION: Ambient Sound pauses when timer paused, resumes on resume. Fades 3s in/out. Does NOT play during breaks (focus-only).
