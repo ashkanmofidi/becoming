@@ -1,5 +1,20 @@
 # Changelog
 
+## v3.1.7 (2026-04-09) - Universal Tick Resume
+
+### Fixed
+- Tick sound stopped on browser back/forward button, not just in-app navigation. Root cause: tick interval was tied to timer page component lifecycle — any unmount killed it.
+
+### Changed
+- **Architecture overhaul**: tick sounds moved from timer page `onTick` callback to `GlobalTickEngine` — a headless component mounted in the app layout that survives ALL navigation types.
+- GlobalTickEngine polls /api/timer every 5 seconds to know if a session is running. Plays ticks independently of which page is visible.
+- Listens to `visibilitychange` (tab switch, mobile background), `popstate` (browser back/forward), `focus` (alt-tab), and Next.js route changes.
+- Timer page `onTick` now only handles haptics (page-local, fine to re-mount).
+- Tick interval stops when tab is hidden (save resources), resumes instantly on return.
+
+### Coverage
+Every navigation path tested: in-app Link, browser back, browser forward, tab switch, mobile background/foreground, alt-tab, window focus.
+
 ## v3.1.6 (2026-04-09) - Completion Recording + 3-Day Session Expiry
 
 ### Fixed
