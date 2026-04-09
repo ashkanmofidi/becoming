@@ -6,6 +6,7 @@ import {
   resumeContext,
   setMasterVolume,
   setMuted as setEngineMuted,
+  setTheme as setEngineTheme,
   playActivationChime,
   playCompletionBell,
   playBreakComplete,
@@ -24,14 +25,12 @@ import type { UserSettings } from '@becoming/shared';
  * Audio hook. PRD Section 5.7.
  *
  * All sounds route through the engine's master gain node.
- * Mute sets masterGain = 0 at the engine level — no per-call checks needed.
- * Call sites just call playX() and the engine handles silence.
+ * Mute/theme/volume synced to engine state — no per-call checks needed.
+ * Every play function just calls the engine; the engine gates everything.
  */
 export function useAudio(settings: UserSettings | null, muted: boolean) {
   const initializedRef = useRef(false);
-  const theme = settings?.soundTheme ?? 'warm';
 
-  // Initialize on first user interaction
   const ensureInitialized = useCallback(async () => {
     if (!initializedRef.current && settings) {
       initAudioEngine(settings.masterVolume);
@@ -40,62 +39,61 @@ export function useAudio(settings: UserSettings | null, muted: boolean) {
     await resumeContext();
   }, [settings?.masterVolume]);
 
-  // Sync mute state to engine
-  useEffect(() => {
-    setEngineMuted(muted);
-  }, [muted]);
+  // Sync mute to engine
+  useEffect(() => { setEngineMuted(muted); }, [muted]);
 
-  // Sync volume
+  // Sync theme to engine
   useEffect(() => {
-    if (initializedRef.current && settings) {
-      setMasterVolume(settings.masterVolume);
-    }
+    if (settings?.soundTheme) setEngineTheme(settings.soundTheme);
+  }, [settings?.soundTheme]);
+
+  // Sync volume to engine
+  useEffect(() => {
+    if (initializedRef.current && settings) setMasterVolume(settings.masterVolume);
   }, [settings?.masterVolume]);
 
-  useEffect(() => {
-    return () => destroyAudioEngine();
-  }, []);
+  useEffect(() => () => destroyAudioEngine(), []);
 
   return {
     ensureInitialized,
 
     playActivation: useCallback(() => {
       ensureInitialized();
-      playActivationChime(theme);
-    }, [theme, ensureInitialized]),
+      playActivationChime();
+    }, [ensureInitialized]),
 
     playCompletion: useCallback((isOvertime = false) => {
       ensureInitialized();
-      playCompletionBell(theme, isOvertime ? 0.06 : 0.12);
-    }, [theme, ensureInitialized]),
+      playCompletionBell(isOvertime ? 0.06 : 0.12);
+    }, [ensureInitialized]),
 
     playBreakEnd: useCallback(() => {
       ensureInitialized();
-      playBreakComplete(theme);
-    }, [theme, ensureInitialized]),
+      playBreakComplete();
+    }, [ensureInitialized]),
 
     playPause: useCallback(() => {
       ensureInitialized();
-      playPauseSound(theme);
+      playPauseSound();
       if (settings?.hapticEnabled && settings?.hapticPauseResume) triggerHaptic(100);
-    }, [theme, settings?.hapticEnabled, settings?.hapticPauseResume, ensureInitialized]),
+    }, [settings?.hapticEnabled, settings?.hapticPauseResume, ensureInitialized]),
 
     playResume: useCallback(() => {
       ensureInitialized();
-      playResumeSound(theme);
+      playResumeSound();
       if (settings?.hapticEnabled && settings?.hapticPauseResume) triggerHaptic(100);
-    }, [theme, settings?.hapticEnabled, settings?.hapticPauseResume, ensureInitialized]),
+    }, [settings?.hapticEnabled, settings?.hapticPauseResume, ensureInitialized]),
 
     playMinuteTick: useCallback(() => {
-      ensureInitialized();
+      // Don't await ensureInitialized — tick must be synchronous for timing.
+      // Engine gates with shouldPlay() if not initialized.
       playTick();
-    }, [ensureInitialized]),
+    }, []),
 
     playLast30s: useCallback(() => {
       if (!settings?.last30sTicking) return;
-      ensureInitialized();
       playLast30sTick();
-    }, [settings?.last30sTicking, ensureInitialized]),
+    }, [settings?.last30sTicking]),
 
     startAmbient: useCallback(() => {
       if (!settings?.ambientSound || settings.ambientSound === 'none') return;
@@ -103,9 +101,7 @@ export function useAudio(settings: UserSettings | null, muted: boolean) {
       startAmbientSound(settings.ambientSound, settings.ambientVolume);
     }, [settings?.ambientSound, settings?.ambientVolume, ensureInitialized]),
 
-    stopAmbient: useCallback(() => {
-      stopAmbientSound();
-    }, []),
+    stopAmbient: useCallback(() => { stopAmbientSound(); }, []),
 
     playCompletionHaptic: useCallback(() => {
       if (settings?.hapticEnabled && settings?.hapticCompletion) triggerHaptic(200);

@@ -1,5 +1,20 @@
 # Changelog
 
+## v3.1.3 (2026-04-09) - Sound System Hardening
+
+### Fixed
+- Tick cadence glitch: first 2 ticks fired back-to-back on timer start. Now enforces 950ms minimum gap + 2-second grace period after start.
+- Sound leaks: engine functions had inconsistent gate checks (some checked theme, some didn't). All now route through single `shouldPlay()` gate.
+- Mute reliability: theme/mute/volume state now stored in engine, synced from React via useEffect. No stale closures.
+- Engine functions no longer accept `theme` parameter — theme is stored in engine state and synced automatically.
+- Stale closure bug: onTick callback referenced stale `state?.mode` and `settings`. Tick logic now reads current values correctly.
+
+### Changed
+- Audio engine: added `shouldPlay()` single gate function (checks initialized + not muted + not silent theme)
+- Audio engine: added `setTheme()` to sync theme from settings
+- useAudio: removed all `theme` parameters from play functions (engine manages theme internally)
+- Tick timing: 3-gate system (integer second change + 950ms minimum + 2s startup grace)
+
 ## v3.1.2 (2026-04-09) - Audio Overhaul
 
 ### Changed

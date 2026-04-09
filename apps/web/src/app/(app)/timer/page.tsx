@@ -88,6 +88,7 @@ export default function TimerPage() {
   const audio = useAudio(settings, isMuted);
   const lastTickedSecondRef = useRef(-1);
   const lastTickTimeRef = useRef(0);
+  const timerStartTimeRef = useRef(0);
 
   // Timer hook
   const {
@@ -113,31 +114,32 @@ export default function TimerPage() {
       fetchTodaySessions();
     },
     onTick: (remaining) => {
-      // Only tick once per integer second
       const currentSecond = Math.floor(remaining);
+
+      // Gate 1: only fire once per distinct integer second
       if (currentSecond === lastTickedSecondRef.current) return;
 
-      // Enforce minimum gap — prevents double-tick on start and jitter
+      // Gate 2: enforce 1-second minimum between ticks (prevents all start glitches)
       const now = Date.now();
-      if (now < lastTickTimeRef.current) return; // Still in grace period
+      if (now - lastTickTimeRef.current < 950) return;
+
+      // Gate 3: grace period after timer start (set in handlePlay)
+      if (now < timerStartTimeRef.current) return;
 
       lastTickedSecondRef.current = currentSecond;
-      lastTickTimeRef.current = now + 900; // Next tick no earlier than 900ms from now
+      lastTickTimeRef.current = now;
 
-      const isFocus = state?.mode === 'focus';
-      const isBreak = state?.mode === 'break' || state?.mode === 'long_break';
-
-      // Last 30s — slightly louder drop
+      // Play the appropriate tick based on settings
       if (remaining <= 30 && remaining > 0 && settings?.last30sTicking) {
         audio.playLast30s();
-      }
-      // Focus tick
-      else if (isFocus && remaining > 30 && settings?.tickDuringFocus) {
-        audio.playMinuteTick();
-      }
-      // Break tick
-      else if (isBreak && remaining > 30 && settings?.tickDuringBreaks) {
-        audio.playMinuteTick();
+      } else if (remaining > 30) {
+        const isFocus = state?.mode === 'focus';
+        const isBreak = state?.mode === 'break' || state?.mode === 'long_break';
+        if (isFocus && settings?.tickDuringFocus) {
+          audio.playMinuteTick();
+        } else if (isBreak && settings?.tickDuringBreaks) {
+          audio.playMinuteTick();
+        }
       }
 
       // Haptic last 10s
@@ -202,9 +204,10 @@ export default function TimerPage() {
 
   // Handlers
   const handlePlay = useCallback(async () => {
-    // Reset tick state — suppress ALL ticks for 1.5s to establish clean cadence
+    // Reset tick state — suppress ALL ticks for 2s to establish clean cadence
     lastTickedSecondRef.current = -1;
-    lastTickTimeRef.current = Date.now() + 1500; // No ticks for 1.5 seconds after start
+    lastTickTimeRef.current = 0;
+    timerStartTimeRef.current = Date.now() + 2000; // No ticks for 2 seconds after start
 
     await audio.ensureInitialized();
 
