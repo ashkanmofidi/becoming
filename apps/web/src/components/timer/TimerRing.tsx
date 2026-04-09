@@ -9,11 +9,9 @@ interface TimerRingProps {
   status: TimerStatus;
   mode: TimerMode;
   displayTime: string;
-  remainingSeconds: number;
   accentColor: string;
   breakAccentColor: string;
   reducedMotion: boolean;
-  showSeconds: boolean;
 }
 
 const RING_SIZE = 280;
@@ -31,11 +29,9 @@ export function TimerRing({
   status,
   mode,
   displayTime,
-  _remainingSeconds,
   accentColor,
   breakAccentColor,
   reducedMotion,
-  _showSeconds,
 }: TimerRingProps) {
   // Ring color based on mode and progress (PRD 5.2.2)
   const ringColor = useMemo(() => {

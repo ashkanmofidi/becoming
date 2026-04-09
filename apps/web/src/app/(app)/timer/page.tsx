@@ -310,11 +310,9 @@ export default function TimerPage() {
         status={state?.status ?? 'idle'}
         mode={state?.mode ?? 'focus'}
         displayTime={displayTime}
-        remainingSeconds={remainingSeconds}
         accentColor={settings?.accentColor ?? '#D97706'}
         breakAccentColor={settings?.breakAccentColor ?? '#0D9488'}
         reducedMotion={settings?.reducedMotion ?? false}
-        showSeconds={settings?.showSeconds ?? true}
       />
 
       {/* Playback Controls (PRD 5.3) */}

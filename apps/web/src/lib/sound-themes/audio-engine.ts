@@ -66,7 +66,7 @@ export function playTone(
   const osc = state.context.createOscillator();
   const gain = state.context.createGain();
 
-  osc.type = options?.type ?? 'sine';
+  osc.type = (options?.type ?? 'sine') as OscillatorType;
   osc.frequency.value = frequency;
   gain.gain.value = options?.volume ?? 0.6;
 
@@ -96,7 +96,7 @@ export function playNoteSequence(
   for (const note of notes) {
     const osc = state.context.createOscillator();
     const gain = state.context.createGain();
-    osc.type = options?.type ?? 'sine';
+    osc.type = (options?.type ?? 'sine') as OscillatorType;
     osc.frequency.value = note.frequency;
     gain.gain.value = options?.volume ?? 0.6;
 

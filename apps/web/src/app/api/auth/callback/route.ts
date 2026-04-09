@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
 
-    const { session, isNewUser, needsTos } = await authService.processOAuthCallback(
+    const { session, needsTos } = await authService.processOAuthCallback(
       googleUser,
       ip,
       userAgent,

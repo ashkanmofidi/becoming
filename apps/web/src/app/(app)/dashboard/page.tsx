@@ -173,12 +173,12 @@ function StatCard({
 
 /* ---------- Custom Recharts Tooltip ---------- */
 
-function ChartTooltip({ active, payload, label }: any) {
+function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string; payload?: { sessions?: number } }>; label?: string }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-bg-card border border-surface-700 rounded-lg px-3 py-2 shadow-lg">
       <p className="text-[10px] font-mono text-surface-500 mb-1">{label}</p>
-      {payload.map((entry: any, i: number) => (
+      {payload.map((entry: { value: number; name: string; payload?: { sessions?: number } }, i: number) => (
         <p key={i} className="text-sm font-mono text-surface-100">
           {fmt(entry.value)}h
           {entry.payload?.sessions != null && (
@@ -237,8 +237,8 @@ export default function DashboardPage() {
         if (!res.ok) throw new Error(`Failed to load dashboard (${res.status})`);
         const json = await res.json();
         if (!cancelled) setData(json);
-      } catch (err: any) {
-        if (!cancelled) setError(err.message ?? 'Something went wrong');
+      } catch (err: unknown) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Something went wrong');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -512,7 +512,7 @@ export default function DashboardPage() {
             <EmptyState message="Your most-used focus intents will appear here." />
           ) : (
             <ul className="space-y-3">
-              {topIntents.slice(0, 5).map((item, i) => {
+              {topIntents.slice(0, 5).map((item) => {
                 const maxCount = topIntents[0]?.count ?? 1;
                 const pct = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
                 return (
