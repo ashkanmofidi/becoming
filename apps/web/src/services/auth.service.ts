@@ -8,6 +8,7 @@ import { createLogger } from '../lib/logger';
 
 const logger = createLogger('auth-service');
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
+const GOOGLE_CLIENT_ID = '115795527932-2q1afagsog0eg29pbdfn3qfs44e27uui.apps.googleusercontent.com';
 
 /**
  * Authentication service. PRD Section 1.2.
@@ -27,7 +28,7 @@ export const authService = {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code,
-        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_id: GOOGLE_CLIENT_ID,
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
         redirect_uri: redirectUri,
         grant_type: 'authorization_code',
@@ -68,7 +69,7 @@ export const authService = {
 
     const payload = await response.json();
 
-    if (payload.aud !== process.env.GOOGLE_CLIENT_ID) {
+    if (payload.aud !== GOOGLE_CLIENT_ID) {
       throw new Error('Token audience mismatch');
     }
 
