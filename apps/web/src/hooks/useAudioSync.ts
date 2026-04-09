@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useSettings } from '@/contexts/SettingsContext';
 import {
   initAudioEngine,
@@ -11,23 +11,24 @@ import {
   startAmbientSound,
   stopAmbientSound,
 } from '@/lib/sound-themes/audio-engine';
-import { startTick, stopTick, setTickMuted, setTickVolume } from '@/lib/tick-engine';
+import { startTick, stopTick, setTickMuted, setTickVolume, isTickRunning } from '@/lib/tick-engine';
 
 /**
- * useAudioSync — runs at the LAYOUT level, not per-page.
+ * useAudioSync — THE SINGLE CONTROLLER for all audio.
  *
- * Subscribes to SettingsContext and keeps ALL audio engines in sync
- * in real time. When ANY setting changes (from Settings page, timer page,
- * or anywhere), this hook applies it to the engines instantly.
+ * Runs at the layout level. Reacts to settings changes AND timer state.
+ * No other component should call startTick/stopTick/startAmbient/stopAmbient.
  *
- * This is the SINGLE place where settings → audio engine wiring happens.
- * Individual pages do NOT need to sync audio — this hook handles everything.
+ * Polls timer state every 2 seconds to know if a session is running.
+ * On every settings change OR timer state change, re-evaluates:
+ * "Should tick be playing? Should ambient be playing?" and applies instantly.
  */
 export function useAudioSync() {
   const { settings } = useSettings();
   const initializedRef = useRef(false);
-  const prevAmbientRef = useRef<string>('none');
-  const prevAmbientVolRef = useRef<number>(0);
+  const timerStateRef = useRef<{ status: string; mode: string } | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const ambientActiveRef = useRef(false);
 
   // Initialize engine on first settings load
   useEffect(() => {
@@ -36,87 +37,93 @@ export function useAudioSync() {
     initializedRef.current = true;
   }, [settings]);
 
-  // 1. MUTE — instant, bidirectional
-  useEffect(() => {
-    if (!settings) return;
+  // The core sync function — evaluates all audio state and applies it
+  const syncAudio = useCallback(() => {
+    if (!settings || !initializedRef.current) return;
+
+    const ts = timerStateRef.current;
+    const isRunning = ts?.status === 'running';
+    const isFocus = ts?.mode === 'focus';
+    const isBreak = ts?.mode === 'break' || ts?.mode === 'long_break';
+
+    // Mute
     setEngineMuted(settings.muted);
     setTickMuted(settings.muted);
-  }, [settings?.muted]);
 
-  // 2. SOUND THEME — swap immediately
-  useEffect(() => {
-    if (!settings) return;
+    // Theme
     setEngineTheme(settings.soundTheme);
-  }, [settings?.soundTheme]);
 
-  // 3. MASTER VOLUME — real-time as slider drags
-  useEffect(() => {
-    if (!settings || !initializedRef.current) return;
+    // Volume
     setEngineVolume(settings.masterVolume);
-    setTickVolume(settings.masterVolume); // Tick engine has its own gain node
-  }, [settings?.masterVolume]);
+    setTickVolume(settings.masterVolume);
 
-  // 4 & 5. TICK DURING FOCUS / BREAKS — start/stop tick immediately
-  // This needs to know if a session is running. We poll /api/timer.
-  // But we can also just let the tick engine be controlled by settings:
-  // if tick settings change, we check current timer state and react.
-  useEffect(() => {
-    if (!settings) return;
+    // Tick: should it play?
+    const shouldTick = isRunning && !settings.muted && settings.soundTheme !== 'silent' && (
+      (isFocus && settings.tickDuringFocus) ||
+      (isBreak && settings.tickDuringBreaks)
+    );
 
-    // Fetch current timer state to decide if tick should play
-    fetch('/api/timer')
-      .then((res) => res.ok ? res.json() : null)
-      .then((data) => {
-        if (!data?.state) return;
-        const { status, mode } = data.state;
-        if (status !== 'running') {
-          stopTick();
-          return;
-        }
-
-        const isFocus = mode === 'focus';
-        const isBreak = mode === 'break' || mode === 'long_break';
-        const shouldTick =
-          (isFocus && settings.tickDuringFocus) ||
-          (isBreak && settings.tickDuringBreaks);
-
-        if (shouldTick && !settings.muted) {
-          startTick();
-        } else {
-          stopTick();
-        }
-      })
-      .catch(() => {});
-  }, [settings?.tickDuringFocus, settings?.tickDuringBreaks, settings?.muted]);
-
-  // 9 & 10. AMBIENT SOUND — start/stop/switch/volume in real time
-  useEffect(() => {
-    if (!settings || !initializedRef.current) return;
-
-    const newAmbient = settings.ambientSound;
-    const newVolume = settings.ambientVolume;
-    const changed = newAmbient !== prevAmbientRef.current || newVolume !== prevAmbientVolRef.current;
-
-    if (!changed) return;
-
-    prevAmbientRef.current = newAmbient;
-    prevAmbientVolRef.current = newVolume;
-
-    if (newAmbient === 'none' || newVolume === 0) {
-      stopAmbientSound();
-      return;
+    if (shouldTick && !isTickRunning()) {
+      startTick();
+    } else if (!shouldTick && isTickRunning()) {
+      stopTick();
     }
 
-    // Only start ambient if a focus session is running
-    fetch('/api/timer')
-      .then((res) => res.ok ? res.json() : null)
-      .then((data) => {
-        if (data?.state?.status === 'running' && data.state.mode === 'focus') {
-          // Ensure audio context is alive
-          resumeContext();
-          startAmbientSound(newAmbient, newVolume);
-        }
-      })
-      .catch(() => {});
-  }, [settings?.ambientSound, settings?.ambientVolume]);
+    // Ambient: should it play?
+    const shouldAmbient = isRunning && isFocus && !settings.muted &&
+      settings.soundTheme !== 'silent' &&
+      settings.ambientSound !== 'none' &&
+      settings.ambientVolume > 0;
+
+    if (shouldAmbient && !ambientActiveRef.current) {
+      resumeContext();
+      startAmbientSound(settings.ambientSound, settings.ambientVolume);
+      ambientActiveRef.current = true;
+    } else if (!shouldAmbient && ambientActiveRef.current) {
+      stopAmbientSound();
+      ambientActiveRef.current = false;
+    } else if (shouldAmbient && ambientActiveRef.current) {
+      // Ambient is playing but settings changed — restart with new settings
+      // (handles ambient sound type change or volume change)
+      startAmbientSound(settings.ambientSound, settings.ambientVolume);
+    }
+  }, [settings]);
+
+  // Poll timer state every 2 seconds
+  const fetchTimerState = useCallback(async () => {
+    try {
+      const res = await fetch('/api/timer');
+      if (res.ok) {
+        const data = await res.json();
+        const newState = data.state ? { status: data.state.status, mode: data.state.mode } : null;
+        const changed = JSON.stringify(newState) !== JSON.stringify(timerStateRef.current);
+        timerStateRef.current = newState;
+        if (changed) syncAudio(); // Timer state changed — re-evaluate audio
+      }
+    } catch { /* silent */ }
+  }, [syncAudio]);
+
+  // Start polling on mount
+  useEffect(() => {
+    fetchTimerState(); // Initial fetch
+    pollRef.current = setInterval(fetchTimerState, 2000);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [fetchTimerState]);
+
+  // React to EVERY settings change instantly
+  useEffect(() => {
+    syncAudio();
+  }, [
+    settings?.muted,
+    settings?.soundTheme,
+    settings?.masterVolume,
+    settings?.tickDuringFocus,
+    settings?.tickDuringBreaks,
+    settings?.last30sTicking,
+    settings?.ambientSound,
+    settings?.ambientVolume,
+    syncAudio,
+  ]);
 }

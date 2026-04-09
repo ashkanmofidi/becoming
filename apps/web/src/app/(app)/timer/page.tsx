@@ -19,7 +19,8 @@ import { IntentInput } from '@/components/timer/IntentInput';
 import { CategorySelector } from '@/components/timer/CategorySelector';
 import { ConfirmModal } from '@/components/timer/ConfirmModal';
 import { DailyFocusTime } from '@/components/timer/DailyFocusTime';
-import { startTick, stopTick, setTickMuted } from '@/lib/tick-engine';
+// Tick/ambient fully controlled by AudioSyncProvider at layout level.
+// No direct tick-engine imports needed in this page.
 import { useSettings } from '@/contexts/SettingsContext';
 
 /**
@@ -74,8 +75,7 @@ export default function TimerPage() {
   const audio = useAudio(settings, isMuted);
   const lastTickedSecondRef = useRef(-1); // For haptic dedup only
 
-  // Sync mute state to tick engine (singleton, lives outside React)
-  useEffect(() => { setTickMuted(isMuted); }, [isMuted]);
+  // Mute sync handled by AudioSyncProvider at layout level
 
   // Timer hook
   const {
@@ -98,8 +98,8 @@ export default function TimerPage() {
       } else {
         audio.playBreakEnd();
       }
-      stopTick();
-      audio.stopAmbient();
+      // AudioSyncProvider handles tick/ambient stop via timer state polling.
+      // No manual stopTick/stopAmbient needed here.
 
       // OPTIMISTIC UPDATE: add a synthetic session to the local array IMMEDIATELY
       // so the counter/progress bar/cycle dots update in the same render cycle.
@@ -134,20 +134,9 @@ export default function TimerPage() {
     },
   });
 
-  // Tick engine: start/stop based on timer state and settings.
-  // The tick engine is a singleton module — survives navigation, no mount/unmount issues.
-  useEffect(() => {
-    const isRunning = state?.status === 'running';
-    const isFocus = state?.mode === 'focus';
-    const isBreak = state?.mode === 'break' || state?.mode === 'long_break';
-    const tickEnabled = (isFocus && settings?.tickDuringFocus) || (isBreak && settings?.tickDuringBreaks);
-
-    if (isRunning && tickEnabled) {
-      startTick();
-    } else {
-      stopTick();
-    }
-  }, [state?.status, state?.mode, settings?.tickDuringFocus, settings?.tickDuringBreaks]);
+  // Tick/ambient audio: fully controlled by AudioSyncProvider at layout level.
+  // No tick/ambient control in this component — settings changes apply instantly
+  // regardless of which page is active, without pause/resume needed.
 
   // Wake Lock (PRD 6.7)
   const wakeLock = useWakeLock(
@@ -214,33 +203,22 @@ export default function TimerPage() {
       audio.playActivation();
     }
 
-    // Start tick immediately — don't wait for state update to trigger useEffect
-    if (tickIsOn) startTick();
-
-    if (settings?.ambientSound && settings.ambientSound !== 'none' && state?.mode === 'focus') {
-      audio.startAmbient();
-    }
+    // AudioSyncProvider detects timer state change via polling and starts tick/ambient
     wakeLock.acquire();
     await actions.start(state?.mode ?? 'focus', intent || null, category);
-  }, [audio, wakeLock, actions, state?.mode, intent, category, settings?.ambientSound, settings?.tickDuringFocus, settings?.tickDuringBreaks]);
+  }, [audio, wakeLock, actions, state?.mode, intent, category, settings?.tickDuringFocus, settings?.tickDuringBreaks]);
 
   const handlePause = useCallback(async () => {
-    stopTick();
     audio.playPause();
-    audio.stopAmbient();
+    // AudioSyncProvider detects paused state and stops tick/ambient
     await actions.pause();
   }, [audio, actions]);
 
   const handleResume = useCallback(async () => {
     audio.playResume();
-    const tickIsOn = (state?.mode === 'focus' && settings?.tickDuringFocus) ||
-      (state?.mode !== 'focus' && settings?.tickDuringBreaks);
-    if (tickIsOn) startTick();
-    if (settings?.ambientSound && settings.ambientSound !== 'none' && state?.mode === 'focus') {
-      audio.startAmbient();
-    }
+    // AudioSyncProvider detects running state and resumes tick/ambient
     await actions.resume();
-  }, [audio, actions, settings?.ambientSound, settings?.tickDuringFocus, settings?.tickDuringBreaks, state?.mode]);
+  }, [audio, actions]);
 
   const handleSkip = useCallback(() => {
     const mode = state?.mode;
@@ -256,7 +234,7 @@ export default function TimerPage() {
       title,
       message,
       onConfirm: async () => {
-        stopTick(); audio.stopAmbient();
+        // AudioSyncProvider handles tick/ambient via polling
         await actions.skip();
         setConfirmModal((m) => ({ ...m, isOpen: false }));
       },
@@ -275,7 +253,7 @@ export default function TimerPage() {
         title: 'Too short to log',
         message: 'Less than 10 seconds elapsed. Skip instead?',
         onConfirm: async () => {
-          stopTick(); audio.stopAmbient();
+          // AudioSyncProvider handles tick/ambient via polling
           await actions.skip();
           setConfirmModal((m) => ({ ...m, isOpen: false }));
         },
@@ -285,7 +263,6 @@ export default function TimerPage() {
 
     // Log partial session + optimistic update
     const mode = state?.mode ?? 'focus';
-    stopTick(); audio.stopAmbient();
 
     // Optimistic: add partial session to local state immediately
     if (mode === 'focus') {
@@ -312,7 +289,7 @@ export default function TimerPage() {
       message: `Reset to ${state?.configuredDuration ?? 25}:00?`,
       onConfirm: async () => {
         await actions.reset();
-        stopTick(); audio.stopAmbient();
+        // AudioSyncProvider handles tick/ambient via polling
         setConfirmModal((m) => ({ ...m, isOpen: false }));
       },
     });
@@ -326,7 +303,7 @@ export default function TimerPage() {
       variant: 'destructive',
       onConfirm: async () => {
         await actions.reset();
-        stopTick(); audio.stopAmbient();
+        // AudioSyncProvider handles tick/ambient via polling
         setConfirmModal((m) => ({ ...m, isOpen: false }));
       },
     });
@@ -340,7 +317,7 @@ export default function TimerPage() {
         message: 'Switching will reset your current session. This session will not be logged. Continue?',
         onConfirm: async () => {
           await actions.switchMode(mode);
-          stopTick(); audio.stopAmbient();
+          // AudioSyncProvider handles tick/ambient via polling
           setConfirmModal((m) => ({ ...m, isOpen: false }));
         },
       });
@@ -466,7 +443,7 @@ export default function TimerPage() {
         onSkip={handleSkip}
         onSkipBreak={async () => {
           // Break skip: no confirmation needed — immediate transition to focus
-          stopTick(); audio.stopAmbient();
+          // AudioSyncProvider handles tick/ambient via polling
           await actions.skip();
         }}
         onFinishEarly={handleFinishEarly}
@@ -483,15 +460,9 @@ export default function TimerPage() {
           // Update via context — instant UI update, background save
           updateSettings({ muted: next });
           if (next) {
-            stopTick(); audio.stopAmbient();
+            // AudioSyncProvider handles tick/ambient via polling
           } else {
-            // Unmuting: resume tick if session is running with tick enabled
-            const tickIsOn = (state?.mode === 'focus' && settings?.tickDuringFocus) ||
-              (state?.mode !== 'focus' && settings?.tickDuringBreaks);
-            if (state?.status === 'running' && tickIsOn) startTick();
-            if (settings?.ambientSound && settings.ambientSound !== 'none' && state?.status === 'running' && state?.mode === 'focus') {
-              audio.startAmbient();
-            }
+            // AudioSyncProvider reacts to muted=false and resumes tick/ambient
           }
         }}
         className={`
