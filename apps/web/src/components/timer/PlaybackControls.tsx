@@ -95,15 +95,16 @@ export function PlaybackControls({
     <>
     <div className="flex items-center justify-center gap-4">
       {/* Skip icon — contextual behavior:
-          Focus: skip with confirmation (onSkip)
-          Break/Long Break: skip immediately, no confirmation (onSkipBreak) */}
+          Focus (running/paused): skip with confirmation (onSkip)
+          Break/Long Break (ANY state including idle): skip immediately (onSkipBreak)
+          Focus idle: disabled (nothing to skip) */}
       <button
         onClick={isFocusMode ? onSkip : onSkipBreak}
-        disabled={status === 'idle' || status === 'completed'}
+        disabled={isFocusMode && (status === 'idle' || status === 'completed')}
         className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
-          status === 'idle' || status === 'completed'
+          isFocusMode && (status === 'idle' || status === 'completed')
             ? 'text-surface-700 cursor-not-allowed'
-            : isBreakActive
+            : !isFocusMode
               ? 'text-teal hover:text-teal-dark hover:bg-teal/10'
               : 'text-surface-300 hover:text-white'
         }`}

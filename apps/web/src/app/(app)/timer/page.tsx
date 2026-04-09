@@ -442,9 +442,13 @@ export default function TimerPage() {
         onResume={handleResume}
         onSkip={handleSkip}
         onSkipBreak={async () => {
-          // Break skip: no confirmation needed — immediate transition to focus
-          // AudioSyncProvider handles tick/ambient via polling
-          await actions.skip();
+          // Break skip: no confirmation, immediate transition to focus.
+          // If break is idle (not started), use switchMode. If running/paused, use skip.
+          if (state?.status === 'running' || state?.status === 'paused') {
+            await actions.skip();
+          } else {
+            await actions.switchMode('focus');
+          }
         }}
         onFinishEarly={handleFinishEarly}
         onReset={handleReset}
