@@ -1,5 +1,17 @@
 # Changelog
 
+## v3.1.19 (2026-04-09) - Complete Feedback System
+
+### Added
+- **User identity on feedback cards**: Google avatar (with letter fallback), full name, email displayed prominently at the top of each card. Avatar URL stored in feedback record at submission time (self-contained, no lookups needed).
+- **Category filtering**: All/General/Bug/Feature tabs with live counts. Counts update based on date filter intersection.
+- **Date range filter**: Last 7/30/60/90 Days + All Time. Composes with category filter — "Bug + Last 7 Days" shows only bugs from last 7 days.
+- **Group by Category toggle**: Groups cards under section headers instead of flat list.
+- **Selection system**: Per-card checkboxes + Select All/Deselect All (respects active filters).
+- **CSV export**: UTF-8 BOM, all fields (name, email, avatar, category, subject, body, severity, status, date), proper filename convention.
+- **PDF export**: Branded Becoming.. report header, date range + category in title, professional card layout, print-optimized.
+- `picture` field added to FeedbackSubmission type + service + API.
+
 ## v3.1.18 (2026-04-09) - Fix /users 500 Error
 
 ### Root cause

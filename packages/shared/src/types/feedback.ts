@@ -4,6 +4,7 @@ export interface FeedbackSubmission {
   userId: string;
   email: string;
   name: string;
+  picture: string;
   role: string;
   category: 'bug' | 'feature_request' | 'general';
   subject: string;

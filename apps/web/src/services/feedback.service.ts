@@ -13,6 +13,7 @@ export const feedbackService = {
     userId: string;
     email: string;
     name: string;
+    picture: string;
     role: string;
     category: 'bug' | 'feature_request' | 'general';
     subject: string;
@@ -37,6 +38,7 @@ export const feedbackService = {
       userId: data.userId,
       email: data.email,
       name: data.name,
+      picture: data.picture,
       role: data.role,
       category: data.category,
       subject: sanitizeString(data.subject),

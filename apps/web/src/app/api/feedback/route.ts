@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     userId: session.userId,
     email: session.email,
     name: session.name,
+    picture: session.picture ?? '',
     role: session.role,
     category: body.category ?? 'general',
     subject: body.subject ?? '',
