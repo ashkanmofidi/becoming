@@ -1,7 +1,7 @@
 # Test Tracker - Becoming.. v3.1.0
 
-## Summary: 140/285 tests written and passing | Unit test coverage: core utils 100%
-## Last Full Run: 2026-04-08 | Duration: 246ms
+## Summary: 230/285 tests written and passing | Core logic + service integration 100%
+## Last Full Run: 2026-04-08 | Duration: 537ms (unit 225ms + integration 312ms)
 
 | Suite | Total | Pass | Fail | Skip | Last Run |
 |-------|-------|------|------|------|----------|
