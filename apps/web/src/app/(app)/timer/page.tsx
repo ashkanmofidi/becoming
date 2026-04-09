@@ -99,6 +99,25 @@ export default function TimerPage() {
       }
       stopTick();
       audio.stopAmbient();
+
+      // OPTIMISTIC UPDATE: add a synthetic session to the local array IMMEDIATELY
+      // so the counter/progress bar/cycle dots update in the same render cycle.
+      // Background fetch confirms the real data afterward.
+      if (mode === 'focus' || mode === 'break' || mode === 'long_break') {
+        const now = new Date();
+        setTodaySessions((prev) => [
+          ...prev,
+          {
+            mode: mode ?? 'focus',
+            status: 'completed',
+            deletedAt: null,
+            date: now.toISOString().split('T')[0] ?? '',
+            actualDuration: (state?.configuredDuration ?? 1) * 60,
+          },
+        ]);
+      }
+
+      // Background fetch to sync with server (corrects any drift)
       fetchTodaySessions();
     },
     onTick: (remaining) => {
