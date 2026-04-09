@@ -114,12 +114,18 @@ export function Sidebar({ userName, userEmail, userPicture, userRole, confirmLog
           </span>
         )}
 
-        {/* Logout (PRD Section 3.3) */}
+        {/* Logout (PRD Section 3.3) — visually distinct, never an afterthought */}
         <button
           onClick={handleLogoutClick}
-          className="block mt-3 text-xs text-surface-500 hover:text-red-400 transition-colors"
+          className="flex items-center gap-2 mt-3 px-3 py-1.5 rounded-lg text-xs font-medium text-red-400 bg-red-950/40 border border-red-900/30 hover:bg-red-900/30 hover:text-red-300 hover:border-red-800/40 transition-all duration-150"
         >
-          Logout
+          {/* Exit/door icon */}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Log out
         </button>
       </div>
 
