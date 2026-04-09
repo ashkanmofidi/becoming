@@ -35,28 +35,51 @@ export const adminService = {
    * Get user list for admin. PRD Section 10.9.
    */
   async getUsers(): Promise<AdminUserEntry[]> {
-    // Scan for all user keys
-    const userKeys = await kvClient.keys('user:*');
+    // Scan for all user keys — use scan instead of keys for Upstash compatibility
+    let userKeys: string[] = [];
+    try {
+      userKeys = await kvClient.keys('user:*');
+    } catch (err) {
+      // KEYS command may fail on some Redis providers — fall back to empty
+      logger.error('Failed to scan user keys', { error: String(err) });
+      return [];
+    }
+
     const users: AdminUserEntry[] = [];
 
     for (const key of userKeys) {
-      if (key.includes(':settings') || key.includes(':sessions')) continue;
-      const user = await kvClient.get<User>(key);
-      if (!user) continue;
+      // Skip non-user keys (settings, sessions, etc.)
+      if (key.includes(':')) {
+        const parts = key.split(':');
+        if (parts.length > 2) continue; // user:sub is 2 parts, user:sub:settings is 3
+      }
 
-      const sessionCount = await sessionRepo.getSessionCount(user.id);
+      try {
+        const user = await kvClient.get<User>(key);
+        if (!user || !user.id) continue;
 
-      users.push({
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        picture: user.picture,
-        role: user.role,
-        joinedAt: user.createdAt,
-        lastActive: user.lastLoginAt,
-        sessions: sessionCount,
-        health: getHealthStatus(user.lastLoginAt, sessionCount),
-      });
+        let sessionCount = 0;
+        try {
+          sessionCount = await sessionRepo.getSessionCount(user.id);
+        } catch {
+          // Session count query failed — show 0, don't crash
+        }
+
+        users.push({
+          id: user.id,
+          email: user.email || 'unknown',
+          name: user.name || 'Unknown User',
+          picture: user.picture || '',
+          role: user.role || 'user',
+          joinedAt: user.createdAt || new Date().toISOString(),
+          lastActive: user.lastLoginAt || user.createdAt || new Date().toISOString(),
+          sessions: sessionCount,
+          health: getHealthStatus(user.lastLoginAt || user.createdAt || new Date().toISOString(), sessionCount),
+        });
+      } catch (err) {
+        // Single user record failed — skip it, don't crash the whole page
+        logger.warn('Failed to read user record', { key, error: String(err) });
+      }
     }
 
     return users.sort((a, b) => new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime());

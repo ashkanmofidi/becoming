@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const view = searchParams.get('view') ?? 'pulse';
 
+  try {
   switch (view) {
     case 'pulse':
       return NextResponse.json(await adminService.getPulseData());
@@ -31,6 +32,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(await adminService.getBetaConfig());
     default:
       return NextResponse.json({ error: 'Unknown view' }, { status: 400 });
+  }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack : '';
+    // Surface the actual error for debugging — remove after fix
+    return NextResponse.json(
+      { error: 'Admin API error', message, stack: stack?.split('\n').slice(0, 5) },
+      { status: 500 },
+    );
   }
 }
 
