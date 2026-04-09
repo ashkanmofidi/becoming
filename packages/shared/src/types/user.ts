@@ -32,6 +32,7 @@ export interface AuthSession {
   userId: string;
   email: string;
   name: string;
+  picture: string;
   role: UserRole;
   createdAt: string;
   expiresAt: string;

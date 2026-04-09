@@ -1,5 +1,16 @@
 # Changelog
 
+## v3.1.4 (2026-04-09) - Google Profile Avatar
+
+### Fixed
+- User avatar showed generic letter "A" instead of Google profile picture. Root cause: AuthSession type was missing `picture` field — Google picture URL was captured during OAuth but never stored in the session or returned by the session API.
+- Fixed chain: AuthSession type → createSession → /api/auth/session response → SidebarWrapper → Sidebar → admin users table. All 6 links in the chain now carry the picture URL.
+- Avatar renders Google profile photo with crossOrigin="anonymous" and referrerPolicy="no-referrer" (PRD 3.1). Letter initial fallback only on image load error.
+- Admin user management table now shows profile avatars alongside names.
+
+### Changed  
+- PRD.md: Section 3.1 avatar implementation confirmed working end-to-end
+
 ## v3.1.3 (2026-04-09) - Sound System Hardening
 
 ### Fixed

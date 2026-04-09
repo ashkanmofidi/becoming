@@ -6,6 +6,7 @@ interface AdminUser {
   id: string;
   email: string;
   name: string;
+  picture: string;
   role: string;
   joinedAt: string;
   lastActive: string;
@@ -60,7 +61,14 @@ export default function AdminUsersPage() {
             <tbody>
               {users.map((user) => (
                 <tr key={user.id} className="border-b border-surface-900/50 hover:bg-surface-900/30">
-                  <td className="py-3 px-2 text-surface-100">{user.name}</td>
+                  <td className="py-3 px-2 text-surface-100 flex items-center gap-2">
+                    {user.picture ? (
+                      <img src={user.picture} alt="" className="w-6 h-6 rounded-full object-cover" crossOrigin="anonymous" referrerPolicy="no-referrer" />
+                    ) : (
+                      <span className="w-6 h-6 rounded-full bg-amber flex items-center justify-center text-white text-[10px] font-semibold">{user.name.charAt(0)}</span>
+                    )}
+                    {user.name}
+                  </td>
                   <td className="py-3 px-2 text-surface-300 text-xs font-mono">{user.email}</td>
                   <td className="py-3 px-2">
                     <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono uppercase ${

@@ -180,6 +180,7 @@ export const authService = {
       userId: user.id,
       email: user.email,
       name: user.name,
+      picture: user.picture,
       role: user.role,
       createdAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),

@@ -11,6 +11,7 @@ export function SidebarWrapper() {
   const [user, setUser] = useState<{
     name: string;
     email: string;
+    picture: string;
     role: UserRole;
   } | null>(null);
 
@@ -49,6 +50,7 @@ export function SidebarWrapper() {
     <Sidebar
       userName={user.name}
       userEmail={user.email}
+      userPicture={user.picture}
       userRole={user.role}
     />
   );

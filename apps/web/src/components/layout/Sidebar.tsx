@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { UserRole } from '@becoming/shared';
@@ -7,6 +8,7 @@ import type { UserRole } from '@becoming/shared';
 interface SidebarProps {
   userName: string;
   userEmail: string;
+  userPicture: string;
   userRole: UserRole;
 }
 
@@ -15,7 +17,7 @@ interface SidebarProps {
  * Persistent left-side nav with brand, profile, core/system/admin sections.
  * Uses Next.js Link for instant client-side navigation (no page reloads).
  */
-export function Sidebar({ userName, userEmail, userRole }: SidebarProps) {
+export function Sidebar({ userName, userEmail, userPicture, userRole }: SidebarProps) {
   const pathname = usePathname();
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   const isSuperAdmin = userRole === 'super_admin';
@@ -55,10 +57,8 @@ export function Sidebar({ userName, userEmail, userRole }: SidebarProps) {
 
       {/* User Identity & Role Card (PRD Section 3) */}
       <div className="mb-6 pb-4 border-b border-surface-900">
-        {/* Avatar fallback with first initial (PRD 3.1) */}
-        <div className="w-10 h-10 rounded-full bg-amber flex items-center justify-center text-white font-semibold text-sm mb-2">
-          {userName.charAt(0).toUpperCase()}
-        </div>
+        {/* Avatar: Google profile picture with letter fallback (PRD 3.1) */}
+        <UserAvatar name={userName} picture={userPicture} size={40} />
         <p className="text-sm text-white font-medium truncate">{userName}</p>
         <p className="text-xs text-surface-500 truncate">{userEmail}</p>
 
@@ -125,5 +125,40 @@ export function Sidebar({ userName, userEmail, userRole }: SidebarProps) {
         </div>
       </div>
     </aside>
+  );
+}
+
+/**
+ * User avatar with Google profile picture and letter fallback.
+ * PRD 3.1: Circular avatar from Google "picture" claim.
+ * Missing/failed: fallback circle with first initial on amber background.
+ */
+function UserAvatar({ name, picture, size }: { name: string; picture: string; size: number }) {
+  const [imgFailed, setImgFailed] = useState(false);
+
+  if (picture && !imgFailed) {
+    return (
+      <img
+        src={picture}
+        alt={name}
+        width={size}
+        height={size}
+        className="rounded-full mb-2 object-cover"
+        style={{ width: size, height: size }}
+        crossOrigin="anonymous"
+        referrerPolicy="no-referrer"
+        onError={() => setImgFailed(true)}
+      />
+    );
+  }
+
+  // Letter fallback
+  return (
+    <div
+      className="rounded-full bg-amber flex items-center justify-center text-white font-semibold mb-2"
+      style={{ width: size, height: size, fontSize: size * 0.4 }}
+    >
+      {name.charAt(0).toUpperCase()}
+    </div>
   );
 }
