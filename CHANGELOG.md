@@ -1,5 +1,17 @@
 # Changelog
 
+## v3.1.9 (2026-04-09) - Logout Confirmation with Active Timer
+
+### Added
+- Logout confirmation modal: when timer is running/paused/overtime and user clicks Logout, shows "You have a focus session in progress. Logging out will reset your timer. Continue?" with Cancel and Log Out buttons.
+- Session expiry warning: when 3-day session expires during an active timer, shows a modal explaining the situation before forcing logout.
+- Timer abandon on logout: calls `timerService.abandon('close')` which writes partial session data to logs before clearing timer state.
+- New `abandon` action on POST /api/timer — used by logout and session expiry flows, bypasses controller check.
+
+### Changed
+- Logout button now checks timer state via GET /api/timer before proceeding. If no active timer, logs out immediately (no modal).
+- SidebarWrapper 401 handler now checks for active timer before forcing redirect.
+
 ## v3.1.8 (2026-04-09) - Clean Tab Title
 
 ### Fixed

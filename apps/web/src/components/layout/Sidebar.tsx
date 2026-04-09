@@ -21,6 +21,7 @@ export function Sidebar({ userName, userEmail, userPicture, userRole }: SidebarP
   const pathname = usePathname();
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   const isSuperAdmin = userRole === 'super_admin';
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const navLink = (href: string, label: string) => {
     const isActive = pathname === href;
@@ -38,7 +39,37 @@ export function Sidebar({ userName, userEmail, userPicture, userRole }: SidebarP
     );
   };
 
-  const handleLogout = async () => {
+  /** Check if timer is active, show confirmation if so, otherwise logout directly. */
+  const handleLogoutClick = async () => {
+    try {
+      const res = await fetch('/api/timer');
+      if (res.ok) {
+        const data = await res.json();
+        const status = data.state?.status;
+        if (status === 'running' || status === 'paused' || status === 'overtime') {
+          setShowLogoutConfirm(true);
+          return;
+        }
+      }
+    } catch {
+      // If we can't check timer state, proceed with logout
+    }
+    performLogout();
+  };
+
+  /** Abandon any active timer, then clear session and redirect. */
+  const performLogout = async () => {
+    // Abandon the timer (writes partial session data to logs)
+    try {
+      await fetch('/api/timer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'abandon' }),
+      });
+    } catch {
+      // Best effort — proceed with logout regardless
+    }
+
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/login';
   };
@@ -74,9 +105,9 @@ export function Sidebar({ userName, userEmail, userPicture, userRole }: SidebarP
           </span>
         )}
 
-        {/* Logout (PRD Section 3.3 — in profile card, NOT sidebar footer) */}
+        {/* Logout (PRD Section 3.3) */}
         <button
-          onClick={handleLogout}
+          onClick={handleLogoutClick}
           className="block mt-3 text-xs text-surface-500 hover:text-red-400 transition-colors"
         >
           Logout
@@ -124,6 +155,33 @@ export function Sidebar({ userName, userEmail, userPicture, userRole }: SidebarP
           </div>
         </div>
       </div>
+
+      {/* Logout confirmation modal — shown when timer is active */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowLogoutConfirm(false)} />
+          <div className="relative bg-bg-card border border-surface-700 rounded-xl p-6 max-w-sm w-full shadow-2xl" role="dialog">
+            <h3 className="text-white font-semibold mb-2">Session in progress</h3>
+            <p className="text-surface-300 text-sm mb-6">
+              You have a focus session in progress. Logging out will reset your timer. Continue?
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2 text-sm text-surface-300 border border-surface-700 rounded-lg hover:bg-surface-900 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowLogoutConfirm(false); performLogout(); }}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   );
 }

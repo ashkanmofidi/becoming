@@ -87,6 +87,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ state });
       }
 
+      case 'abandon': {
+        // Used by logout and session expiry — logs partial session, clears timer
+        await timerService.abandon(userId, 'close');
+        return NextResponse.json({ success: true });
+      }
+
       default:
         return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
     }

@@ -101,7 +101,7 @@ Role from server-side KV profile, passed via session data. Client never determin
 "Logout" button in or directly below profile card. NOT in sidebar footer (relocated from there).
 Click: clear server session (KV delete), invalidate cookie, redirect to login. Toast: "You have been logged out."
 Network failure on logout: cookie cleared client-side regardless. Server session expires via TTL.
-If timer is running when user logs out: session is marked as abandoned server-side. Timer state is cleared.
+If timer is running when user logs out: [CHANGED v3.1.9 - 2026-04-09] Do NOT log out immediately. Show confirmation modal: "You have a focus session in progress. Logging out will reset your timer. Continue?" with Cancel (stays on page, timer intact) and Log Out (abandons session, writes partial data to logs, clears timer, redirects to login). Same behavior for 3-day session expiry with active timer — show warning before forcing logout.
 3.4 Account View
 Tap profile card or "Account" link: opens account view (modal or page).
 Shows: avatar/name/email (read-only), role with explanation, TOS status and version, active sessions (devices with "Sign out everywhere" button), member-since date, data summary (total sessions, hours, streak).
