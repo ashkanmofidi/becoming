@@ -408,6 +408,13 @@ export default function TimerPage() {
         onPause={handlePause}
         onResume={handleResume}
         onSkip={handleSkip}
+        onSkipBreak={async () => {
+          // Skip break: log partial break, transition to focus idle — no confirmation needed
+          stopTick();
+          audio.stopAmbient();
+          await actions.skip();
+          fetchTodaySessions();
+        }}
         onReset={handleReset}
         onAbandon={handleAbandon}
         onStopOvertime={() => actions.stopOvertime()}

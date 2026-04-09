@@ -11,6 +11,7 @@ interface PlaybackControlsProps {
   onPause: () => void;
   onResume: () => void;
   onSkip: () => void;
+  onSkipBreak: () => void;
   onReset: () => void;
   onAbandon: () => void;
   onStopOvertime: () => void;
@@ -31,6 +32,7 @@ export function PlaybackControls({
   onPause,
   onResume,
   onSkip,
+  onSkipBreak,
   onReset,
   onAbandon,
   onStopOvertime,
@@ -38,6 +40,7 @@ export function PlaybackControls({
 }: PlaybackControlsProps) {
   const isStrictFocus = strictMode && isFocusMode;
   const isActive = status === 'running' || status === 'paused';
+  const isBreakActive = isActive && !isFocusMode;
 
   // Non-controller view (PRD 5.2.7)
   if (isActive && !isController) {
@@ -132,6 +135,17 @@ export function PlaybackControls({
       >
         <ResetIcon />
       </button>
+
+      {/* Skip Break — only visible during active break, prominent teal button */}
+      {isBreakActive && (
+        <button
+          onClick={onSkipBreak}
+          className="ml-2 px-4 py-2 text-sm font-mono text-teal border border-teal/40 rounded-full hover:bg-teal/10 transition-all duration-200"
+          aria-label="Skip Break"
+        >
+          Skip Break →
+        </button>
+      )}
     </div>
   );
 }

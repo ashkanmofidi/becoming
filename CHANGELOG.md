@@ -1,5 +1,14 @@
 # Changelog
 
+## v3.1.16 (2026-04-09) - Skip Break Button
+
+### Added
+- "Skip Break →" button appears on the timer screen during active breaks (running or paused).
+- Tapping it immediately: stops tick, logs the partial break with actual elapsed duration (not full break length), transitions to focus mode in idle/ready state with saved focus duration displayed.
+- No confirmation modal needed — skipping a break is always safe.
+- Button disappears once focus mode starts.
+- Styled as a teal outline pill to match the break color palette.
+
 ## v3.1.15 (2026-04-09) - Unified Sound Toggle
 
 ### Fixed

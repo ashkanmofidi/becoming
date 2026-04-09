@@ -212,6 +212,7 @@ Three circular buttons: Skip (|▶, 40x40px), Play/Pause (▶/⏸, 56x56px, outl
 IDLE: Play enabled, Skip disabled, Reset disabled. RUNNING: Play→Pause (200ms morph), Skip enabled, Reset enabled. PAUSED: Pause→Play, Skip/Reset enabled.
 Play: starts timer, server record status=running. No confirmation. Pause: pauses, server pausedAt=now. No confirmation.
 Skip (running/paused): confirm "Skip? Won't count toward goal." Confirmed: abandon + auto-advance mode. Reset (running/paused): confirm "Reset to [25:00]?" Confirmed: abandon + idle same mode.
+Skip Break [ADDED v3.1.16 - 2026-04-09]: During active breaks (running or paused), a "Skip Break →" button appears in the playback controls. No confirmation needed. Logs the partial break with actual elapsed duration, transitions to focus mode in idle/ready state. Button only visible during breaks, disappears in focus mode.
 Multi-device: only controller has enabled controls. Others view-only + "Take over."
 Shortcuts: Space=Play/Pause, R=Reset, S=Skip. Only when no text input focused. 100ms debounce.
 Tap targets: 44x44px min (56x56px Play). All states: hover, active, focus (2px amber), disabled. Debounce-protected to prevent race conditions.
