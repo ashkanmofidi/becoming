@@ -86,9 +86,7 @@ export default function TimerPage() {
 
   // Audio — mute state controls master gain in the engine. No per-call-site checks.
   const audio = useAudio(settings, isMuted);
-  const lastTickedSecondRef = useRef(-1);
-  const lastTickTimeRef = useRef(0);
-  const timerStartTimeRef = useRef(0);
+  const lastTickedSecondRef = useRef(-1); // For haptic dedup only
 
   // Timer hook
   const {
@@ -114,35 +112,12 @@ export default function TimerPage() {
       fetchTodaySessions();
     },
     onTick: (remaining) => {
+      // Tick SOUNDS are handled by GlobalTickEngine (lives in layout, survives all navigation).
+      // This callback only handles haptics (page-local, fine to re-mount).
       const currentSecond = Math.floor(remaining);
-
-      // Gate 1: only fire once per distinct integer second
       if (currentSecond === lastTickedSecondRef.current) return;
-
-      // Gate 2: enforce 1-second minimum between ticks (prevents all start glitches)
-      const now = Date.now();
-      if (now - lastTickTimeRef.current < 950) return;
-
-      // Gate 3: grace period after timer start (set in handlePlay)
-      if (now < timerStartTimeRef.current) return;
-
       lastTickedSecondRef.current = currentSecond;
-      lastTickTimeRef.current = now;
 
-      // Play the appropriate tick based on settings
-      if (remaining <= 30 && remaining > 0 && settings?.last30sTicking) {
-        audio.playLast30s();
-      } else if (remaining > 30) {
-        const isFocus = state?.mode === 'focus';
-        const isBreak = state?.mode === 'break' || state?.mode === 'long_break';
-        if (isFocus && settings?.tickDuringFocus) {
-          audio.playMinuteTick();
-        } else if (isBreak && settings?.tickDuringBreaks) {
-          audio.playMinuteTick();
-        }
-      }
-
-      // Haptic last 10s
       if (remaining <= 10 && remaining > 0) {
         audio.playLast10sHaptic();
       }
@@ -204,10 +179,7 @@ export default function TimerPage() {
 
   // Handlers
   const handlePlay = useCallback(async () => {
-    // Reset tick state — suppress ALL ticks for 2s to establish clean cadence
     lastTickedSecondRef.current = -1;
-    lastTickTimeRef.current = 0;
-    timerStartTimeRef.current = Date.now() + 2000; // No ticks for 2 seconds after start
 
     await audio.ensureInitialized();
 
