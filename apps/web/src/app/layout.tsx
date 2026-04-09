@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { SkipToContent } from '@/components/a11y/SkipToContent';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -27,7 +28,22 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-bg-primary text-surface-100 antialiased">
-        {children}
+        <SkipToContent />
+        <div id="main-content">
+          {children}
+        </div>
+        {/* Service worker registration */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker.register('/sw.js').catch(() => {});
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import { HeaderButtons } from '@/components/header/HeaderButtons';
 
 /**
  * Authenticated app layout. PRD Section 4.
@@ -58,6 +59,10 @@ export default async function AppLayout({
 
       {/* Main content */}
       <main className="flex-1 min-h-screen">
+        {/* Header bar with action buttons (PRD Section 9) */}
+        <div className="flex items-center justify-end px-4 py-2 border-b border-surface-900/50">
+          <HeaderButtons />
+        </div>
         {children}
       </main>
     </div>
