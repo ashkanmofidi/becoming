@@ -28,6 +28,7 @@ export default function TimerPage() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [intent, setIntent] = useState('');
   const [category, setCategory] = useState('General');
+  const [isMuted, setIsMuted] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -95,45 +96,49 @@ export default function TimerPage() {
   } = useTimer({
     showSeconds: settings?.showSeconds ?? true,
     onComplete: () => {
-      const mode = state?.mode;
-      if (mode === 'focus') {
-        audio.playCompletion(false);
-        audio.playCompletionHaptic();
-      } else {
-        audio.playBreakEnd();
+      if (!isMuted) {
+        const mode = state?.mode;
+        if (mode === 'focus') {
+          audio.playCompletion(false);
+          audio.playCompletionHaptic();
+        } else {
+          audio.playBreakEnd();
+        }
       }
       audio.stopAmbient();
       fetchTodaySessions();
     },
     onTick: (remaining) => {
-      // PRD 5.7.1: Ticks fire exactly once per second, not on every render frame
+      if (isMuted) return;
+
+      // Only tick once per integer second
       const currentSecond = Math.floor(remaining);
       if (currentSecond === lastTickedSecondRef.current) return;
 
-      // Enforce minimum 800ms between ticks to prevent double-tick on start
+      // Enforce minimum gap — prevents double-tick on start and jitter
       const now = Date.now();
-      if (now - lastTickTimeRef.current < 800) return;
+      if (now < lastTickTimeRef.current) return; // Still in grace period
 
       lastTickedSecondRef.current = currentSecond;
-      lastTickTimeRef.current = now;
+      lastTickTimeRef.current = now + 900; // Next tick no earlier than 900ms from now
 
       const isFocus = state?.mode === 'focus';
       const isBreak = state?.mode === 'break' || state?.mode === 'long_break';
 
-      // PRD 5.7.1: Last 30s Ticking — every second in final 30s (any mode)
+      // Last 30s — slightly louder drop
       if (remaining <= 30 && remaining > 0 && settings?.last30sTicking) {
         audio.playLast30s();
       }
-      // PRD 5.7.1: Tick During Focus — every second during focus (not last 30s to avoid double tick)
+      // Focus tick
       else if (isFocus && remaining > 30 && settings?.tickDuringFocus) {
         audio.playMinuteTick();
       }
-      // PRD 5.7.1: Tick During Breaks — every second during break
+      // Break tick
       else if (isBreak && remaining > 30 && settings?.tickDuringBreaks) {
         audio.playMinuteTick();
       }
 
-      // PRD 5.7.4: Haptic Last 10s — 50ms pulse every second in final 10s
+      // Haptic last 10s
       if (remaining <= 10 && remaining > 0) {
         audio.playLast10sHaptic();
       }
@@ -195,18 +200,26 @@ export default function TimerPage() {
 
   // Handlers
   const handlePlay = useCallback(async () => {
-    // Reset tick refs to prevent stale state causing double-tick on start
+    // Reset tick state — suppress ALL ticks for 1.5s to establish clean cadence
     lastTickedSecondRef.current = -1;
-    lastTickTimeRef.current = Date.now(); // Suppress tick for first 800ms (activation chime covers it)
+    lastTickTimeRef.current = Date.now() + 1500; // No ticks for 1.5 seconds after start
 
     await audio.ensureInitialized();
-    audio.playActivation();
+
+    // If tick is enabled, don't play activation chime — the tick IS the rhythm.
+    // Playing both creates a jarring double-sound on start.
+    const tickIsOn = (state?.mode === 'focus' && settings?.tickDuringFocus) ||
+      (state?.mode !== 'focus' && settings?.tickDuringBreaks);
+    if (!tickIsOn && !isMuted) {
+      audio.playActivation();
+    }
+
     if (settings?.ambientSound && settings.ambientSound !== 'none' && state?.mode === 'focus') {
       audio.startAmbient();
     }
     wakeLock.acquire();
     await actions.start(state?.mode ?? 'focus', intent || null, category);
-  }, [audio, wakeLock, actions, state?.mode, intent, category, settings?.ambientSound]);
+  }, [audio, wakeLock, actions, state?.mode, intent, category, settings?.ambientSound, settings?.tickDuringFocus, settings?.tickDuringBreaks, isMuted]);
 
   const handlePause = useCallback(async () => {
     audio.playPause();
@@ -366,6 +379,26 @@ export default function TimerPage() {
         onStopOvertime={() => actions.stopOvertime()}
         onTakeOver={() => actions.takeOver()}
       />
+
+      {/* Mute toggle — instant access without going to Settings */}
+      <button
+        onClick={() => {
+          setIsMuted(!isMuted);
+          if (!isMuted) {
+            audio.stopAmbient();
+          } else if (settings?.ambientSound && settings.ambientSound !== 'none' && state?.status === 'running' && state?.mode === 'focus') {
+            audio.startAmbient();
+          }
+        }}
+        className={`px-3 py-1.5 rounded-full text-xs font-mono uppercase tracking-wider transition-colors ${
+          isMuted
+            ? 'bg-red-900/20 text-red-400 border border-red-800/30'
+            : 'bg-surface-900/50 text-surface-500 border border-surface-700'
+        }`}
+        title={isMuted ? 'Unmute all sounds' : 'Mute all sounds'}
+      >
+        {isMuted ? '🔇 Muted' : '🔊 Sound'}
+      </button>
 
       {/* Daily Goal (PRD 5.4) */}
       <DailyGoal completed={dailyGoal.completed} target={dailyGoal.target} />

@@ -202,50 +202,72 @@ export function playResumeSound(theme: SoundTheme): void {
 }
 
 /**
- * Play tick sound — ultra-soft water drop tuned for focus.
+ * Play tick sound — soft water drop on a cushioned surface.
  *
- * Sound psychology principles applied:
- * - 396Hz base: one of the Solfeggio frequencies, associated with
- *   releasing tension and grounding (used in meditation soundscapes)
- * - Pure sine wave: no harmonics, no harshness, minimal cognitive load
- * - Sub-threshold volume (1.5%): perceived as ambient texture, not an event.
- *   The brain registers rhythm without conscious attention (entrainment)
- * - 300ms decay: matches natural water drop resonance in a ceramic bowl
- * - Gentle pitch bend (396→220Hz): mimics the physics of a real water
- *   drop — pitch falls as the ripple spreads. Feels organic, not digital
- * - 1-second interval: aligns with resting heart rate, promotes calm focus
- *   through auditory-cardiac coupling (research: Thaut, 2005)
+ * Designed for maximum focus and calm using sound research:
+ *
+ * Technique: filtered noise burst + low sine body
+ * - A real water drop is NOT a pure tone — it's a brief broadband
+ *   impulse (the "blep") followed by a low resonant body.
+ * - We simulate this with a very short noise burst (3ms) through a
+ *   bandpass filter at 280Hz, layered with a 150Hz sine "body."
+ * - 150Hz is in the chest-resonance range — felt more than heard,
+ *   creating a warm, grounding sensation.
+ * - Total volume is 1% of master — subliminal. The brain perceives
+ *   the rhythm pattern without consciously tracking each drop.
+ * - Matches the acoustic profile of rain on a leaf or a zen fountain.
  */
-export function playTick(volume = 0.015): void {
+export function playTick(volume = 0.01): void {
   if (!state.context || !state.masterGain) return;
 
   const ctx = state.context;
   const now = ctx.currentTime;
 
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
+  // Layer 1: The "blep" — very short filtered noise impulse
+  const bufferSize = Math.floor(ctx.sampleRate * 0.004); // 4ms of noise
+  const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const noiseData = noiseBuffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) {
+    noiseData[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize); // Decaying noise
+  }
+  const noiseSource = ctx.createBufferSource();
+  noiseSource.buffer = noiseBuffer;
 
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(396, now);
-  osc.frequency.exponentialRampToValueAtTime(220, now + 0.3);
+  // Bandpass filter — only let through the soft "blep" frequencies
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 280;
+  filter.Q.value = 2;
 
-  // Soft attack, long natural decay — like a drop rippling outward
-  gain.gain.setValueAtTime(0, now);
-  gain.gain.linearRampToValueAtTime(volume, now + 0.008); // 8ms soft attack
-  gain.gain.setTargetAtTime(0, now + 0.04, 0.12); // Long exponential tail
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.value = volume * 3;
 
-  osc.connect(gain);
-  gain.connect(state.masterGain);
-  osc.start(now);
-  osc.stop(now + 0.5);
+  noiseSource.connect(filter);
+  filter.connect(noiseGain);
+  noiseGain.connect(state.masterGain);
+  noiseSource.start(now);
+
+  // Layer 2: The "body" — ultra-low sine, felt more than heard
+  const body = ctx.createOscillator();
+  const bodyGain = ctx.createGain();
+  body.type = 'sine';
+  body.frequency.value = 150;
+
+  bodyGain.gain.setValueAtTime(0, now);
+  bodyGain.gain.linearRampToValueAtTime(volume * 0.8, now + 0.005);
+  bodyGain.gain.setTargetAtTime(0, now + 0.02, 0.06);
+
+  body.connect(bodyGain);
+  bodyGain.connect(state.masterGain);
+  body.start(now);
+  body.stop(now + 0.25);
 }
 
 /**
- * Play last-30s tick — same drop, gently more present.
- * Still relaxing, just enough to notice the shift in urgency.
+ * Play last-30s tick — same soft drop, slightly more audible.
  */
 export function playLast30sTick(): void {
-  playTick(0.03);
+  playTick(0.02);
 }
 
 /**
