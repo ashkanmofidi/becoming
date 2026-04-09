@@ -132,6 +132,7 @@ export default function SettingsPage() {
           <Toggle label="Desktop Notifications" enabled={settings.desktopNotifications} onChange={(v) => update('desktopNotifications', v)} />
           <Stepper label="Daily Goal" subtitle="Focus sessions per day" value={settings.dailyGoal} onChange={(v) => update('dailyGoal', v)} min={LIMITS.DAILY_GOAL_MIN} max={LIMITS.DAILY_GOAL_MAX} />
           <Toggle label="Strict Mode" description="Disables pause/skip/reset during focus" enabled={settings.strictMode} onChange={(v) => update('strictMode', v)} />
+          <Toggle label="Ask before logout with active timer" description="Show confirmation when logging out during a session" enabled={settings.confirmLogoutWithActiveTimer} onChange={(v) => update('confirmLogoutWithActiveTimer', v)} />
           <Select label="Streak Calculation" value={settings.streakCalculation} onChange={(v) => update('streakCalculation', v as UserSettings['streakCalculation'])} options={[
             { value: 'one_session', label: 'At least 1 session' },
             { value: 'meet_goal', label: 'Meet daily goal' },

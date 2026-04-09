@@ -16,6 +16,7 @@ export function SidebarWrapper() {
     role: UserRole;
   } | null>(null);
   const [showExpiryWarning, setShowExpiryWarning] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(true);
 
   useEffect(() => {
     fetch('/api/auth/session')
@@ -43,6 +44,15 @@ export function SidebarWrapper() {
       .then((data) => {
         if (data?.authenticated && data.user) {
           setUser(data.user);
+          // Fetch logout confirmation preference
+          fetch('/api/settings')
+            .then((r) => r.json())
+            .then((s) => {
+              if (s.settings?.confirmLogoutWithActiveTimer !== undefined) {
+                setConfirmLogout(s.settings.confirmLogoutWithActiveTimer);
+              }
+            })
+            .catch(() => {});
         }
       })
       .catch(() => {});
@@ -116,6 +126,7 @@ export function SidebarWrapper() {
       userEmail={user.email}
       userPicture={user.picture}
       userRole={user.role}
+      confirmLogoutWithActiveTimer={confirmLogout}
     />
   );
 }

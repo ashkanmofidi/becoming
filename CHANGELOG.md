@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.1.10 (2026-04-09) - "Don't Ask Again" Logout Preference
+
+### Added
+- "Don't ask me again" checkbox in logout confirmation modal. When checked and confirmed, saves `confirmLogoutWithActiveTimer: false` to user settings. Future logouts with active timer skip the modal — abandon and logout immediately.
+- Settings toggle: "Ask before logout with active timer" under Behavior section. Allows re-enabling the prompt.
+- New setting field: `confirmLogoutWithActiveTimer` (boolean, default `true`) in UserSettings type, defaults, and migration.
+
 ## v3.1.9 (2026-04-09) - Logout Confirmation with Active Timer
 
 ### Added

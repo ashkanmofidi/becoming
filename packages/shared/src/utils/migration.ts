@@ -32,6 +32,7 @@ export function createDefaultSettings(): UserSettings {
     dayResetTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     streakCalculation: BEHAVIOR_DEFAULTS.STREAK_CALCULATION,
     streakFreezePerMonth: BEHAVIOR_DEFAULTS.STREAK_FREEZE_PER_MONTH,
+    confirmLogoutWithActiveTimer: BEHAVIOR_DEFAULTS.CONFIRM_LOGOUT_WITH_ACTIVE_TIMER,
     theme: DISPLAY_DEFAULTS.THEME,
     fontSize: DISPLAY_DEFAULTS.FONT_SIZE,
     accentColor: DISPLAY_DEFAULTS.ACCENT_COLOR,

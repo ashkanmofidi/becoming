@@ -23,6 +23,7 @@ export interface UserSettings {
   dayResetTimezone: string;
   streakCalculation: 'one_session' | 'meet_goal' | 'open_app';
   streakFreezePerMonth: number;
+  confirmLogoutWithActiveTimer: boolean;
 
   // Display (Section 6.3)
   theme: 'dark' | 'light' | 'system';

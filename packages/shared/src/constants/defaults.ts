@@ -23,6 +23,7 @@ export const BEHAVIOR_DEFAULTS = {
   DAY_RESET_TIME: '00:00',
   STREAK_CALCULATION: 'one_session' as const,
   STREAK_FREEZE_PER_MONTH: 2,
+  CONFIRM_LOGOUT_WITH_ACTIVE_TIMER: true,
 } as const;
 
 export const DISPLAY_DEFAULTS = {

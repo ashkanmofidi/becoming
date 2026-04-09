@@ -10,6 +10,7 @@ interface SidebarProps {
   userEmail: string;
   userPicture: string;
   userRole: UserRole;
+  confirmLogoutWithActiveTimer: boolean;
 }
 
 /**
@@ -17,11 +18,12 @@ interface SidebarProps {
  * Persistent left-side nav with brand, profile, core/system/admin sections.
  * Uses Next.js Link for instant client-side navigation (no page reloads).
  */
-export function Sidebar({ userName, userEmail, userPicture, userRole }: SidebarProps) {
+export function Sidebar({ userName, userEmail, userPicture, userRole, confirmLogoutWithActiveTimer }: SidebarProps) {
   const pathname = usePathname();
   const isAdmin = userRole === 'admin' || userRole === 'super_admin';
   const isSuperAdmin = userRole === 'super_admin';
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [dontAskAgain, setDontAskAgain] = useState(false);
 
   const navLink = (href: string, label: string) => {
     const isActive = pathname === href;
@@ -39,7 +41,7 @@ export function Sidebar({ userName, userEmail, userPicture, userRole }: SidebarP
     );
   };
 
-  /** Check if timer is active, show confirmation if so, otherwise logout directly. */
+  /** Check if timer is active. Show confirmation unless user opted out. */
   const handleLogoutClick = async () => {
     try {
       const res = await fetch('/api/timer');
@@ -47,8 +49,15 @@ export function Sidebar({ userName, userEmail, userPicture, userRole }: SidebarP
         const data = await res.json();
         const status = data.state?.status;
         if (status === 'running' || status === 'paused' || status === 'overtime') {
-          setShowLogoutConfirm(true);
-          return;
+          if (confirmLogoutWithActiveTimer) {
+            // User wants to be asked — show modal
+            setShowLogoutConfirm(true);
+            return;
+          } else {
+            // User opted out — skip modal, abandon and logout immediately
+            await performLogout();
+            return;
+          }
         }
       }
     } catch {
@@ -162,18 +171,48 @@ export function Sidebar({ userName, userEmail, userPicture, userRole }: SidebarP
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowLogoutConfirm(false)} />
           <div className="relative bg-bg-card border border-surface-700 rounded-xl p-6 max-w-sm w-full shadow-2xl" role="dialog">
             <h3 className="text-white font-semibold mb-2">Session in progress</h3>
-            <p className="text-surface-300 text-sm mb-6">
+            <p className="text-surface-300 text-sm mb-4">
               You have a focus session in progress. Logging out will reset your timer. Continue?
             </p>
+            <label className="flex items-center gap-2 mb-5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={dontAskAgain}
+                onChange={(e) => setDontAskAgain(e.target.checked)}
+                className="rounded border-surface-700 bg-surface-900 text-amber focus:ring-amber"
+              />
+              <span className="text-xs text-surface-400">Don&apos;t ask me again</span>
+            </label>
             <div className="flex gap-3 justify-end">
               <button
-                onClick={() => setShowLogoutConfirm(false)}
+                onClick={() => { setShowLogoutConfirm(false); setDontAskAgain(false); }}
                 className="px-4 py-2 text-sm text-surface-300 border border-surface-700 rounded-lg hover:bg-surface-900 transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={() => { setShowLogoutConfirm(false); performLogout(); }}
+                onClick={async () => {
+                  setShowLogoutConfirm(false);
+                  // Save "don't ask again" preference to user settings if checked
+                  if (dontAskAgain) {
+                    try {
+                      const res = await fetch('/api/settings');
+                      if (res.ok) {
+                        const data = await res.json();
+                        const settings = data.settings;
+                        if (settings) {
+                          settings.confirmLogoutWithActiveTimer = false;
+                          await fetch('/api/settings', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ settings }),
+                          });
+                        }
+                      }
+                    } catch { /* best effort */ }
+                  }
+                  performLogout();
+                }}
                 className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors"
               >
                 Log Out
