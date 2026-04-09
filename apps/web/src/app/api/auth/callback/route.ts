@@ -36,10 +36,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const origin = request.nextUrl.origin;
     const tokens = await authService.exchangeCodeForTokens(
       code,
       codeVerifier,
-      `${process.env.APP_URL}/api/auth/callback`,
+      `${origin}/api/auth/callback`,
     );
 
     // Decode ID token (PRD 1.2.1 step 8)

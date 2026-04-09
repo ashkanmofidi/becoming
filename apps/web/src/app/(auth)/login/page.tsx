@@ -20,9 +20,9 @@ export default function LoginPage() {
       const codeChallenge = await generateCodeChallenge(codeVerifier);
       const state = generateState();
 
-      // Store PKCE values for callback
-      sessionStorage.setItem('pkce_code_verifier', codeVerifier);
-      sessionStorage.setItem('pkce_state', state);
+      // Store PKCE verifier in cookie so the server callback can read it
+      document.cookie = `pkce_verifier=${codeVerifier}; path=/; max-age=600; secure; samesite=lax`;
+      document.cookie = `pkce_state=${state}; path=/; max-age=600; secure; samesite=lax`;
 
       // Redirect to Google OAuth (PRD Section 1.2.1 step 3)
       const GOOGLE_CLIENT_ID = '115795527932-2q1afagsog0eg29pbdfn3qfs44e27uui.apps.googleusercontent.com';
