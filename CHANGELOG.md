@@ -1,5 +1,13 @@
 # Changelog
 
+## v3.1.5 (2026-04-09) - Tick Sound Survives Navigation
+
+### Fixed
+- Tick sound stopped when navigating away from timer (e.g., to Settings) and never resumed on return. Root cause: useAudio destroyed the AudioContext on unmount, and playMinuteTick didn't call ensureInitialized to re-create it.
+- Audio engine is now a persistent singleton — never destroyed during in-app navigation. Only cleaned up on tab close.
+- playMinuteTick and playLast30s now call ensureInitialized to guarantee the engine is alive before playing.
+- Documented why destroyAudioEngine is intentionally NOT called on unmount (AudioContext requires user gesture to re-create).
+
 ## v3.1.4 (2026-04-09) - Google Profile Avatar
 
 ### Fixed

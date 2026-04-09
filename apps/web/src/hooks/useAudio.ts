@@ -52,7 +52,11 @@ export function useAudio(settings: UserSettings | null, muted: boolean) {
     if (initializedRef.current && settings) setMasterVolume(settings.masterVolume);
   }, [settings?.masterVolume]);
 
-  useEffect(() => () => destroyAudioEngine(), []);
+  // NOTE: We intentionally do NOT destroy the audio engine on unmount.
+  // The engine is a singleton that must survive page navigation within the app.
+  // Destroying it kills the AudioContext, which requires a new user gesture
+  // to re-create — breaking tick sounds on return to the timer page.
+  // The engine is cleaned up naturally when the browser tab closes.
 
   return {
     ensureInitialized,
@@ -85,15 +89,17 @@ export function useAudio(settings: UserSettings | null, muted: boolean) {
     }, [settings?.hapticEnabled, settings?.hapticPauseResume, ensureInitialized]),
 
     playMinuteTick: useCallback(() => {
-      // Don't await ensureInitialized — tick must be synchronous for timing.
-      // Engine gates with shouldPlay() if not initialized.
+      // Ensure engine is alive — it may have been created on a previous mount.
+      // ensureInitialized is a no-op if already initialized (fast path).
+      ensureInitialized();
       playTick();
-    }, []),
+    }, [ensureInitialized]),
 
     playLast30s: useCallback(() => {
       if (!settings?.last30sTicking) return;
+      ensureInitialized();
       playLast30sTick();
-    }, [settings?.last30sTicking]),
+    }, [settings?.last30sTicking, ensureInitialized]),
 
     startAmbient: useCallback(() => {
       if (!settings?.ambientSound || settings.ambientSound === 'none') return;
