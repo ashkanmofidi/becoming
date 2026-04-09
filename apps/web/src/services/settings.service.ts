@@ -60,6 +60,13 @@ export const settingsService = {
     s.ambientVolume = validateStepperValue(s.ambientVolume, 0, 100);
     s.idleReminderDelay = validateStepperValue(s.idleReminderDelay, 5, 60);
 
+    // FEATURE INTERACTION: focusDuration < minCountableSession
+    // If user sets focus to 1 min but min countable is 10, their sessions silently vanish.
+    // Auto-adjust: minCountableSession can never exceed focusDuration.
+    if (s.minCountableSession > s.focusDuration) {
+      s.minCountableSession = s.focusDuration;
+    }
+
     // Weekly goal (PRD 6.8)
     if (s.weeklyGoalEnabled) {
       s.weeklyGoalTarget = validateStepperValue(s.weeklyGoalTarget, LIMITS.WEEKLY_GOAL_MIN, LIMITS.WEEKLY_GOAL_MAX);

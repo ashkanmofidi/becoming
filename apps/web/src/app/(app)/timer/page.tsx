@@ -100,6 +100,7 @@ export default function TimerPage() {
     actions,
   } = useTimer({
     showSeconds: settings?.showSeconds ?? true,
+    defaultDurationMinutes: settings?.focusDuration ?? 25,
     onComplete: () => {
       const mode = state?.mode;
       if (mode === 'focus') {

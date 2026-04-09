@@ -7,6 +7,7 @@ import { LIMITS } from '@becoming/shared';
 
 interface UseTimerOptions {
   showSeconds: boolean;
+  defaultDurationMinutes: number; // From user settings — used when no timer state exists
   onComplete?: () => void;
   onTick?: (remaining: number) => void;
 }
@@ -40,7 +41,7 @@ interface UseTimerReturn {
  */
 export function useTimer(options: UseTimerOptions): UseTimerReturn {
   const [state, setState] = useState<TimerState | null>(null);
-  const [remainingSeconds, setRemainingSeconds] = useState(25 * 60);
+  const [remainingSeconds, setRemainingSeconds] = useState(options.defaultDurationMinutes * 60);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const deviceIdRef = useRef(getOrCreateDeviceId());
@@ -167,7 +168,7 @@ export function useTimer(options: UseTimerOptions): UseTimerReturn {
   }, [deviceId, options.onComplete]);
 
   // Calculate progress (0 to 1)
-  const totalSeconds = (state?.configuredDuration ?? 25) * 60;
+  const totalSeconds = (state?.configuredDuration ?? options.defaultDurationMinutes) * 60;
   const progress = state?.status === 'overtime'
     ? 0
     : Math.max(0, Math.min(1, 1 - remainingSeconds / totalSeconds));

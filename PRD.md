@@ -279,7 +279,7 @@ Focus: stepper +/–, range 1–120 min, step 1, default 25. Subtitle: "Minutes 
 Short Break: same pattern, range 1–30, default 5.
 Long Break: same, range 1–60, default 15.
 Cycles: stepper, range 2–10, default 4. Subtitle: "Sessions before long break." Mid-cycle change prompt.
-Minimum Countable Session (NEW): stepper, 1–25 min, default 10. Sessions shorter not logged/counted. DEPENDENCY: affects Session Log (excluded), Daily Goal (not counted), Streak (not counted), Dashboard stats (excluded).
+Minimum Countable Session (NEW): stepper, 1–25 min, default 10. Sessions shorter not logged/counted. DEPENDENCY: affects Session Log (excluded), Daily Goal (not counted), Streak (not counted), Dashboard stats (excluded). [CHANGED v3.1.11 - 2026-04-09] FEATURE INTERACTION: minCountableSession can NEVER exceed focusDuration. If user sets focus to 1 min, minCountable auto-adjusts to 1 min. This prevents sessions from being silently discarded. Enforced in settings validation and UI.
 Overtime Allowance (NEW): toggle, default OFF. Timer counts up after 00:00. DEPENDENCY: modifies completion behavior, chime volume (40%), ring display (depleted + pulse), session duration logging (includes overtime). INTERACTION with Strict Mode: see Section 5.2.4.
 6.2 Behavior
 Auto-Start Breaks: toggle, OFF. 5-second countdown overlay with Cancel. INTERACTION: works normally after Strict Mode focus completion.

@@ -1,5 +1,18 @@
 # Changelog
 
+## v3.1.11 (2026-04-09) - Settings Persistence + Session Counting Fix
+
+### Fixed
+- Timer displayed 25:00 after login instead of user's saved focus duration. Root cause: useTimer initialized `remainingSeconds` to hardcoded `25*60`. Now reads from `settings.focusDuration`. Settings were always persisted in KV — the display was wrong, not the data.
+- 1-minute focus sessions not counted. Root cause: `minCountableSession` default is 10 minutes, silently discarding sessions under 10 min. Now: `minCountableSession` can never exceed `focusDuration` — auto-adjusted on save and in UI.
+- Settings max on Minimum Countable Session stepper now capped at current focus duration.
+
+### Changed
+- useTimer accepts `defaultDurationMinutes` option from settings (no more hardcoded 25).
+- settings.service `validateAndEnforce`: if `minCountableSession > focusDuration`, auto-lowers it.
+- Settings page: focusDuration change auto-adjusts minCountableSession. Stepper max bound linked.
+- PRD Appendix B: documented focusDuration↔minCountableSession interaction.
+
 ## v3.1.10 (2026-04-09) - "Don't Ask Again" Logout Preference
 
 ### Added
