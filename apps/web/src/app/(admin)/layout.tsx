@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { authService } from '@/services/auth.service';
 
 /**
  * Admin layout. PRD Section 10.1.
- * Role-gated: completely absent for regular users.
+ * Cookie check only — role enforcement is done by the admin API routes
+ * via requireRole() middleware. Server-side KV calls in layouts cause
+ * 500 errors on Vercel serverless when KV connection fails.
  */
 export default async function AdminLayout({
   children,
@@ -16,11 +17,6 @@ export default async function AdminLayout({
 
   if (!token) {
     redirect('/login');
-  }
-
-  const session = await authService.validateSession(token);
-  if (!session || (session.role !== 'admin' && session.role !== 'super_admin')) {
-    redirect('/timer?error=forbidden');
   }
 
   return <>{children}</>;

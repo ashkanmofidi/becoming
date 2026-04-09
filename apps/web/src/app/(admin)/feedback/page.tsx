@@ -11,8 +11,13 @@ export default function AdminFeedbackPage() {
 
   useEffect(() => {
     fetch('/api/admin?view=feedback')
-      .then((res) => res.json())
-      .then((data) => setFeedback(data.feedback ?? []))
+      .then((res) => {
+        if (res.status === 401) { window.location.href = '/login?error=session_expired'; return null; }
+        if (res.status === 403) { window.location.href = '/timer?error=forbidden'; return null; }
+        if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+        return res.json();
+      })
+      .then((data) => { if (data) setFeedback(data.feedback ?? []); })
       .finally(() => setIsLoading(false));
   }, []);
 

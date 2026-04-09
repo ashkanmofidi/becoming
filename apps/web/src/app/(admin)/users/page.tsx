@@ -20,11 +20,24 @@ interface AdminUser {
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch('/api/admin?view=users')
-      .then((res) => res.json())
-      .then((data) => setUsers(data.users ?? []))
+      .then((res) => {
+        if (res.status === 401) {
+          window.location.href = '/login?error=session_expired';
+          return null;
+        }
+        if (res.status === 403) {
+          window.location.href = '/timer?error=forbidden';
+          return null;
+        }
+        if (!res.ok) throw new Error(`Server error (${res.status})`);
+        return res.json();
+      })
+      .then((data) => { if (data) setUsers(data.users ?? []); })
+      .catch((err) => setError(err.message ?? 'Failed to load users'))
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -35,6 +48,20 @@ export default function AdminUsersPage() {
     churning: 'text-orange-400',
     dormant: 'text-red-400',
   };
+
+  if (error) {
+    return (
+      <div className="p-6 max-w-6xl mx-auto">
+        <h1 className="text-xl font-semibold mb-6">User Management</h1>
+        <div className="bg-red-900/20 border border-red-800 text-red-300 text-sm p-4 rounded-lg">
+          {error}
+          <button onClick={() => window.location.reload()} className="block mt-2 text-amber hover:underline">
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-6xl mx-auto">

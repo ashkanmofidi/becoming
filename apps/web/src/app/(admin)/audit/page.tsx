@@ -12,8 +12,13 @@ export default function AuditLogPage() {
 
   useEffect(() => {
     fetch('/api/admin?view=audit')
-      .then((res) => res.json())
-      .then((data) => setEntries(data.entries ?? []))
+      .then((res) => {
+        if (res.status === 401) { window.location.href = '/login?error=session_expired'; return null; }
+        if (res.status === 403) { window.location.href = '/timer?error=forbidden'; return null; }
+        if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+        return res.json();
+      })
+      .then((data) => { if (data) setEntries(data.entries ?? []); })
       .finally(() => setIsLoading(false));
   }, []);
 

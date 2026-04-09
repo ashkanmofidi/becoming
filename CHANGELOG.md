@@ -1,5 +1,15 @@
 # Changelog
 
+## v3.1.18 (2026-04-09) - Fix /users 500 Error
+
+### Root cause
+Admin layout (`(admin)/layout.tsx`) called `authService.validateSession()` server-side during page render. This KV call fails on Vercel serverless, causing a 500.
+
+### Fixed
+- Admin layout: removed server-side `validateSession()` call. Now only checks cookie existence (same pattern as app layout). Role enforcement handled by admin API routes via `requireRole()` middleware.
+- Admin pages (users, analytics, feedback, audit): added 401/403 response handling. Non-admin users get a clean redirect to `/timer?error=forbidden`, not a crash.
+- Users page: added error state with retry button for API failures.
+
 ## v3.1.16 (2026-04-09) - Skip Break Button
 
 ### Added

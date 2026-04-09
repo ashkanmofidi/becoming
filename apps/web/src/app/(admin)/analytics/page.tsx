@@ -11,6 +11,8 @@ export default function AdminAnalyticsPage() {
   useEffect(() => {
     const fetchPulse = async () => {
       const res = await fetch('/api/admin?view=pulse');
+      if (res.status === 401) { window.location.href = '/login?error=session_expired'; return; }
+      if (res.status === 403) { window.location.href = '/timer?error=forbidden'; return; }
       if (res.ok) setPulse(await res.json());
     };
     fetchPulse();
