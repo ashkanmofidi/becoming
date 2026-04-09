@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import type { UserSettings } from '@becoming/shared';
 import { LIMITS } from '@becoming/shared';
 import { SettingsCard } from '@/components/settings/primitives/SettingsCard';
@@ -10,84 +10,20 @@ import { Slider } from '@/components/settings/primitives/Slider';
 import { Select } from '@/components/settings/primitives/Select';
 import { ColorPicker } from '@/components/settings/primitives/ColorPicker';
 import { SegmentedControl } from '@/components/settings/primitives/SegmentedControl';
+import { useSettings } from '@/contexts/SettingsContext';
 
 /**
  * Settings page. PRD Section 6.
- * Auto-save with 500ms debounce. No Save button.
+ * Uses global SettingsContext — changes apply instantly to all pages.
+ * Background save happens automatically via context provider.
  */
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isFirstLoad = useRef(true);
-
-  // Fetch settings
-  useEffect(() => {
-    fetch('/api/settings')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.settings) setSettings(data.settings);
-        isFirstLoad.current = false;
-      })
-      .catch(() => showToast('Failed to load settings', 'error'));
-  }, []);
-
-  const showToast = (message: string, type: 'success' | 'error') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 2000);
-  };
-
-  // Auto-save with 500ms debounce (PRD 6.0)
-  const saveSettings = useCallback((updated: UserSettings) => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      let retries = 3;
-      while (retries > 0) {
-        try {
-          const res = await fetch('/api/settings', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ settings: updated }),
-          });
-          if (res.ok) {
-            showToast('Settings saved', 'success');
-            return;
-          }
-          throw new Error('Save failed');
-        } catch {
-          retries--;
-          if (retries > 0) {
-            showToast("Couldn't save. Retrying...", 'error');
-            await new Promise((r) => setTimeout(r, retries === 2 ? 1000 : retries === 1 ? 2000 : 4000));
-          } else {
-            showToast("Changes will sync when you're back online", 'error');
-          }
-        }
-      }
-    }, LIMITS.SETTINGS_DEBOUNCE_MS);
-  }, []);
+  const { settings, updateSettings } = useSettings();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const update = useCallback((key: keyof UserSettings, value: any) => {
-    setSettings((prev) => {
-      if (!prev) return prev;
-      const updated = { ...prev, [key]: value };
-
-      // Feature interactions (PRD Appendix B)
-      if (key === 'reducedMotion' && value === true) {
-        updated.completionAnimationIntensity = 'subtle';
-        if (updated.clockFont === 'flip') updated.clockFont = 'minimal';
-      }
-
-      // If focus duration drops below min countable, auto-adjust
-      if (key === 'focusDuration' && updated.minCountableSession > value) {
-        updated.minCountableSession = value;
-      }
-
-      saveSettings(updated);
-      return updated;
-    });
-  }, [saveSettings]);
+    updateSettings({ [key]: value } as Partial<UserSettings>);
+  }, [updateSettings]);
 
   if (!settings) {
     return (
@@ -108,15 +44,6 @@ export default function SettingsPage() {
     <div className="p-6 max-w-5xl mx-auto pb-24">
       {/* Header */}
       <h1 className="text-xl font-semibold mb-6">Settings</h1>
-
-      {/* Toast (PRD 6.0) */}
-      {toast && (
-        <div className={`fixed bottom-4 right-4 z-50 px-4 py-2 rounded-lg text-sm ${
-          toast.type === 'success' ? 'bg-green-900/80 text-green-200' : 'bg-red-900/80 text-red-200'
-        }`}>
-          {toast.message}
-        </div>
-      )}
 
       {/* Desktop 2-col, mobile 1-col (PRD 6.15) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

@@ -2,11 +2,12 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { SidebarWrapper } from '@/components/layout/SidebarWrapper';
 import { HeaderButtons } from '@/components/header/HeaderButtons';
+import { SettingsProvider } from '@/contexts/SettingsContext';
 
 /**
  * Authenticated app layout. PRD Section 4.
- * Tick engine is now a pure singleton module (lib/tick-engine.ts),
- * NOT a React component. Called directly from timer page handlers.
+ * SettingsProvider wraps all pages — single source of truth for settings.
+ * Changes on any page propagate instantly to all others.
  */
 export default async function AppLayout({
   children,
@@ -21,15 +22,17 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
-      <SidebarWrapper />
+    <SettingsProvider>
+      <div className="flex min-h-screen">
+        <SidebarWrapper />
 
-      <main className="flex-1 min-h-screen">
-        <div className="flex items-center justify-end px-4 py-2 border-b border-surface-900/50">
-          <HeaderButtons />
-        </div>
-        {children}
-      </main>
-    </div>
+        <main className="flex-1 min-h-screen">
+          <div className="flex items-center justify-end px-4 py-2 border-b border-surface-900/50">
+            <HeaderButtons />
+          </div>
+          {children}
+        </main>
+      </div>
+    </SettingsProvider>
   );
 }

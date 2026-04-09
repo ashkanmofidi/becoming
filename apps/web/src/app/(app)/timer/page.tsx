@@ -19,6 +19,7 @@ import { IntentInput } from '@/components/timer/IntentInput';
 import { CategorySelector } from '@/components/timer/CategorySelector';
 import { ConfirmModal } from '@/components/timer/ConfirmModal';
 import { startTick, stopTick, setTickMuted } from '@/lib/tick-engine';
+import { useSettings } from '@/contexts/SettingsContext';
 
 /**
  * Timer page. PRD Section 5.
@@ -27,12 +28,10 @@ import { startTick, stopTick, setTickMuted } from '@/lib/tick-engine';
  * daily goal, cycle tracker, intent/category bar.
  */
 export default function TimerPage() {
-  const [settings, setSettings] = useState<UserSettings | null>(null);
+  // Settings from global context — shared with Settings page, instant updates
+  const { settings, updateSettings } = useSettings();
   const [intent, setIntent] = useState('');
-  const [category, setCategory] = useState('General');
-  // Mute state comes from persisted settings — single source of truth.
-  // No localStorage, no component state. Both timer and settings page
-  // read/write the same settings.muted field.
+  const [category, setCategory] = useState(settings?.defaultCategory ?? 'General');
   const isMuted = settings?.muted ?? false;
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -50,19 +49,6 @@ export default function TimerPage() {
     date: string;
     actualDuration: number;
   }>>([]);
-
-  // Fetch settings
-  useEffect(() => {
-    fetch('/api/settings')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.settings) {
-          setSettings(data.settings);
-          setCategory(data.settings.defaultCategory ?? 'General');
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   // Fetch today's sessions
   const fetchTodaySessions = useCallback(async () => {
@@ -425,16 +411,8 @@ export default function TimerPage() {
       <button
         onClick={async () => {
           const next = !isMuted;
-          // Write to persisted settings — single source of truth
-          if (settings) {
-            const updated = { ...settings, muted: next };
-            setSettings(updated);
-            fetch('/api/settings', {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ settings: updated }),
-            }).catch(() => {});
-          }
+          // Update via context — instant UI update, background save
+          updateSettings({ muted: next });
           if (next) {
             stopTick(); audio.stopAmbient();
           } else {
