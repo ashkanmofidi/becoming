@@ -1,9 +1,7 @@
 import { timerRepo } from '../repositories/timer.repo';
 import { sessionRepo } from '../repositories/session.repo';
 import { settingsRepo } from '../repositories/settings.repo';
-import type { TimerState, TimerStatus, TimerMode, SessionRecord } from '@becoming/shared';
-import { LIMITS } from '@becoming/shared';
-import { calculateElapsedSeconds } from '@becoming/shared';
+import type { TimerState, TimerMode, SessionRecord } from '@becoming/shared';
 import { createLogger } from '../lib/logger';
 
 const logger = createLogger('timer-service');

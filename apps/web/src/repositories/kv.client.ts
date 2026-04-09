@@ -39,8 +39,13 @@ export const kvClient = {
     return withRetry(`GET ${key}`, () => kv.get<T>(key));
   },
 
-  async set(key: string, value: KVValue, options?: { ex?: number; px?: number; nx?: boolean }): Promise<void> {
-    await withRetry(`SET ${key}`, () => kv.set(key, value, options ?? {}));
+  async set(key: string, value: KVValue, options?: { ex?: number }): Promise<void> {
+    const ex = options?.ex;
+    if (ex !== undefined) {
+      await withRetry(`SET ${key}`, () => kv.set(key, value, { ex }));
+    } else {
+      await withRetry(`SET ${key}`, () => kv.set(key, value));
+    }
   },
 
   async del(...keys: string[]): Promise<void> {
@@ -67,7 +72,7 @@ export const kvClient = {
     await withRetry(`HSET ${key}`, () => kv.hset(key, data));
   },
 
-  async hgetall<T = Record<string, KVValue>>(key: string): Promise<T | null> {
+  async hgetall<T extends Record<string, unknown> = Record<string, KVValue>>(key: string): Promise<T | null> {
     return withRetry(`HGETALL ${key}`, () => kv.hgetall<T>(key));
   },
 
@@ -76,11 +81,11 @@ export const kvClient = {
   },
 
   async lpush(key: string, ...values: KVValue[]): Promise<number> {
-    return withRetry(`LPUSH ${key}`, () => kv.lpush(key, ...values));
+    return withRetry(`LPUSH ${key}`, () => kv.lpush(key, ...values as [KVValue, ...KVValue[]]));
   },
 
   async lrange<T = KVValue>(key: string, start: number, stop: number): Promise<T[]> {
-    return withRetry(`LRANGE ${key}`, () => kv.lrange<T>(key, start, stop));
+    return withRetry(`LRANGE ${key}`, () => kv.lrange(key, start, stop)) as Promise<T[]>;
   },
 
   async llen(key: string): Promise<number> {
@@ -88,15 +93,15 @@ export const kvClient = {
   },
 
   async sadd(key: string, ...members: KVValue[]): Promise<number> {
-    return withRetry(`SADD ${key}`, () => kv.sadd(key, ...members));
+    return withRetry(`SADD ${key}`, () => kv.sadd(key, ...members as [KVValue, ...KVValue[]]));
   },
 
   async srem(key: string, ...members: KVValue[]): Promise<number> {
-    return withRetry(`SREM ${key}`, () => kv.srem(key, ...members));
+    return withRetry(`SREM ${key}`, () => kv.srem(key, ...members as [KVValue, ...KVValue[]]));
   },
 
-  async smembers<T = string>(key: string): Promise<T[]> {
-    return withRetry(`SMEMBERS ${key}`, () => kv.smembers<T>(key));
+  async smembers(key: string): Promise<string[]> {
+    return withRetry(`SMEMBERS ${key}`, () => kv.smembers(key)) as Promise<string[]>;
   },
 
   async sismember(key: string, member: KVValue): Promise<number> {
@@ -111,8 +116,8 @@ export const kvClient = {
     return withRetry(`KEYS ${pattern}`, () => kv.keys(pattern));
   },
 
-  async scan(cursor: number, options?: { match?: string; count?: number }): Promise<[number, string[]]> {
-    return withRetry(`SCAN`, () => kv.scan(cursor, options));
+  async scan(cursor: number, options?: { match?: string; count?: number }): Promise<[string, string[]]> {
+    return withRetry(`SCAN`, () => kv.scan(cursor, options ?? {})) as Promise<[string, string[]]>;
   },
 };
 

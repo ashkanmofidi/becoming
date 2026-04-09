@@ -11,7 +11,7 @@ export default function NotFound() {
       </h1>
       <p className="text-surface-500 text-6xl font-mono font-bold my-8">404</p>
       <p className="text-surface-300 text-center mb-8 max-w-md">
-        This page doesn't exist. It may have been moved or you may have typed the URL incorrectly.
+        This page doesn&apos;t exist. It may have been moved or you may have typed the URL incorrectly.
       </p>
       <Link
         href="/timer"

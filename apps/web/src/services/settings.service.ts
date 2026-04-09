@@ -1,7 +1,7 @@
 import { settingsRepo } from '../repositories/settings.repo';
-import type { UserSettings, Category } from '@becoming/shared';
+import type { UserSettings } from '@becoming/shared';
 import { LIMITS, APP_DEFAULTS, CATEGORY_DEFAULTS } from '@becoming/shared';
-import { createDefaultSettings, migrateSettings, validateStepperValue, validateCategoryName, validateHexColor } from '@becoming/shared';
+import { migrateSettings, validateStepperValue, validateCategoryName, validateHexColor } from '@becoming/shared';
 import { createLogger } from '../lib/logger';
 
 const logger = createLogger('settings-service');

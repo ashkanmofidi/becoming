@@ -2,7 +2,7 @@ import { userRepo } from '../repositories/user.repo';
 import { settingsRepo } from '../repositories/settings.repo';
 import { auditRepo } from '../repositories/audit.repo';
 import { kvClient, keys } from '../repositories/kv.client';
-import type { User, AuthSession, UserRole, TosRecord } from '@becoming/shared';
+import type { User, AuthSession, UserRole } from '@becoming/shared';
 import { APP_DEFAULTS } from '@becoming/shared';
 import { createLogger } from '../lib/logger';
 

@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react';
+
 interface SettingsCardProps {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 /**

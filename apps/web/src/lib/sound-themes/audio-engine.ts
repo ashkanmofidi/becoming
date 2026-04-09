@@ -59,7 +59,7 @@ export function setMasterVolume(volume: number): void {
 export function playTone(
   frequency: number,
   durationMs: number,
-  options?: { volume?: number; type?: OscillatorType; fadeOut?: number },
+  options?: { volume?: number; type?: string; fadeOut?: number },
 ): void {
   if (!state.context || !state.masterGain) return;
 
@@ -88,7 +88,7 @@ export function playTone(
  */
 export function playNoteSequence(
   notes: { frequency: number; durationMs: number }[],
-  options?: { volume?: number; type?: OscillatorType },
+  options?: { volume?: number; type?: string },
 ): void {
   if (!state.context || !state.masterGain) return;
 

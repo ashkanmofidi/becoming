@@ -67,7 +67,8 @@ export default function SettingsPage() {
     }, LIMITS.SETTINGS_DEBOUNCE_MS);
   }, []);
 
-  const update = useCallback(<K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const update = useCallback((key: keyof UserSettings, value: any) => {
     setSettings((prev) => {
       if (!prev) return prev;
       const updated = { ...prev, [key]: value };

@@ -2,10 +2,6 @@ import { sessionRepo } from '../repositories/session.repo';
 import { settingsRepo } from '../repositories/settings.repo';
 import type { SessionRecord, TimerMode } from '@becoming/shared';
 import { getCurrentDay } from '@becoming/shared';
-import { createLogger } from '../lib/logger';
-
-const logger = createLogger('session-service');
-
 /**
  * Session service. PRD Section 8.
  * Handles session queries, filtering, export, and bulk operations.

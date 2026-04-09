@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { LIMITS } from '@becoming/shared';
 
 interface IntentInputProps {

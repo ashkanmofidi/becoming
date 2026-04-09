@@ -1,5 +1,5 @@
 import { kvClient, keys } from './kv.client';
-import type { User, BetaConfig } from '@becoming/shared';
+import type { User } from '@becoming/shared';
 import { createLogger } from '../lib/logger';
 
 const logger = createLogger('user-repo');

@@ -2,10 +2,6 @@ import { sessionRepo } from '../repositories/session.repo';
 import { settingsRepo } from '../repositories/settings.repo';
 import type { SessionRecord } from '@becoming/shared';
 import { getCurrentDay, calculateGoalRate, calculateStreak } from '@becoming/shared';
-import { createLogger } from '../lib/logger';
-
-const logger = createLogger('dashboard-service');
-
 /**
  * Dashboard service. PRD Section 7.
  * Server-side computation. < 1 second load. 30-second poll.

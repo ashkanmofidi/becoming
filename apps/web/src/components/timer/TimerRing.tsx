@@ -31,11 +31,11 @@ export function TimerRing({
   status,
   mode,
   displayTime,
-  remainingSeconds,
+  _remainingSeconds,
   accentColor,
   breakAccentColor,
   reducedMotion,
-  showSeconds,
+  _showSeconds,
 }: TimerRingProps) {
   // Ring color based on mode and progress (PRD 5.2.2)
   const ringColor = useMemo(() => {

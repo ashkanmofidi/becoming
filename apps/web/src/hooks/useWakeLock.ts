@@ -2,6 +2,9 @@
 
 import { useRef, useCallback, useEffect } from 'react';
 
+// eslint-disable-next-line no-undef
+type WakeLockSentinel = { release: () => Promise<void> };
+
 /**
  * Wake Lock hook. PRD Section 6.7.
  * Keeps screen on during focus sessions.

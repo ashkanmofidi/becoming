@@ -1,6 +1,5 @@
 import { feedbackRepo } from '../repositories/feedback.repo';
 import type { FeedbackSubmission, FeedbackMetadata } from '@becoming/shared';
-import { LIMITS } from '@becoming/shared';
 import { validateFeedback, sanitizeString } from '@becoming/shared';
 import { createLogger } from '../lib/logger';
 
