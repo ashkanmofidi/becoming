@@ -1,7 +1,7 @@
 # Build Tracker - Becoming.. v3.1.0
 
-## Current Status: Phase 2 - Timer Core (COMPLETE)
-## Overall Progress: 40% (16 of 40 features complete)
+## Current Status: Phase 3 - Settings (COMPLETE)
+## Overall Progress: 50% (20 of 40 features complete)
 ## Last Updated: 2026-04-08
 
 | Phase | Feature | PRD Section | Status | Tests Pass | Date |
@@ -23,8 +23,8 @@
 | 2 | Sound System | 5.7 | DONE | — | 4/8 |
 | 2 | Daily Goal + Cycle Tracker | 5.4-5.5 | DONE | 0/9 | 4/8 |
 | 2 | Intent + Category Bar | 5.6 | DONE | 0/11 | 4/8 |
-| 3 | Settings Service | 6.0 | PENDING | 0/29 | — |
-| 3 | Settings Page UI | 6.1-6.15 | PENDING | — | — |
+| 3 | Settings Service | 6.0 | DONE | 0/29 | 4/8 |
+| 3 | Settings Page UI | 6.1-6.15 | DONE | — | 4/8 |
 | 4 | Dashboard Service | 7 | PENDING | 0/14 | — |
 | 4 | Dashboard Page UI | 7.1-7.9 | PENDING | — | — |
 | 4 | Session Log Service | 8 | PENDING | 0/19 | — |
