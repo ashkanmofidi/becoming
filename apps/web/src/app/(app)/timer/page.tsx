@@ -286,7 +286,13 @@ export default function TimerPage() {
     settings?.cycleCount ?? 4,
   );
 
-  const isController = state?.controllingDeviceId === deviceId || !state?.controllingDeviceId;
+  // User is controller if: no controlling device set, OR this device is the controller,
+  // OR the timer is idle/completed (no one controls an idle timer)
+  const isController =
+    !state?.controllingDeviceId ||
+    state.controllingDeviceId === deviceId ||
+    state.status === 'idle' ||
+    state.status === 'completed';
 
   // Tab title (PRD 5.2.8)
   useEffect(() => {

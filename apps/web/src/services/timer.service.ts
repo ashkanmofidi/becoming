@@ -21,10 +21,26 @@ export const timerService = {
     if (!state) return null;
 
     // Check heartbeat timeout (PRD 5.2.7: 60s without heartbeat clears controller)
-    if (state.status === 'running' && state.controllingDeviceId) {
+    if ((state.status === 'running' || state.status === 'paused') && state.controllingDeviceId) {
       const expired = await timerRepo.isHeartbeatExpired(userId);
       if (expired) {
+        // Stale running timer — clear controller so any device can claim it
         state.controllingDeviceId = null;
+        state.lastHeartbeatAt = null;
+        await timerRepo.setState(userId, state);
+      }
+    }
+
+    // If timer has been "running" for longer than its configured duration + 1 hour
+    // with no heartbeat, it's abandoned — reset to idle
+    if (state.status === 'running' && state.startedAt && !state.controllingDeviceId) {
+      const elapsed = Date.now() - new Date(state.startedAt).getTime();
+      const maxReasonable = (state.configuredDuration * 60 + 3600) * 1000; // duration + 1 hour
+      if (elapsed > maxReasonable) {
+        state.status = 'idle';
+        state.startedAt = null;
+        state.pausedAt = null;
+        state.overtimeStartedAt = null;
         await timerRepo.setState(userId, state);
       }
     }

@@ -8,6 +8,7 @@
 - Sound system: Tick During Focus now fires every second (was every minute). Tick During Breaks now implemented. Last 30s Ticking fires once per second (was every render frame). Haptic Last 10s now wired.
 - Slow page transitions: sidebar now uses Next.js Link for instant client-side navigation (was using <a> tags causing full page reloads).
 - Missing sidebar elements: Super Admin/Admin role badge, Logout button, Admin nav section (Analytics, Users, Feedback, Audit Log) now visible for admin/super_admin users.
+- Stale timer state showing "Timer running on another device" when no other device is active. Timer now auto-resets abandoned running states and correctly identifies controller on idle/completed timers.
 
 ### Changed
 - PRD.md: Added Sections 5.7.1-5.7.4 (sound behavior rules), updated Section 2 (instant navigation), Section 3 (sidebar profile card)

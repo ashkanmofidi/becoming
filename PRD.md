@@ -181,7 +181,7 @@ FEATURE INTERACTION: Color Blind Mode ON: break ring gets a DASHED stroke style 
 Timer state in KV: timer:{userId} = { status, mode, startedAt, pausedAt, configuredDuration, controllingDeviceId, lastHeartbeatAt }.
 Device B opens: fetches state, computes remaining = configuredDuration - (now - startedAt), displays mid-countdown. Banner: "Timer running on another device" + "Take over here."
 Single controller model: controller has full controls; others view-only + "Take over." Transfer updates controllingDeviceId. Original gets toast: "Control moved."
-Heartbeat: controller sends every 15 seconds. 60 seconds without: controllingDeviceId cleared (null), any device can claim.
+Heartbeat: controller sends every 15 seconds. 60 seconds without: controllingDeviceId cleared (null), any device can claim. [CHANGED v3.1.1 - 2026-04-09] Additionally, if a timer has been "running" with no heartbeat for longer than its configured duration + 1 hour, it is automatically reset to idle (abandoned). This prevents stale running states from blocking new sessions.
 Simultaneous Play: first request processed, sets controller. Second rejected with toast.
 EDGE CASE: Multiple tabs same browser: BroadcastChannel API negotiates controller. Second tab sees "This session is controlled in another tab" + "Take over."
 5.2.8 Browser Background Behavior
