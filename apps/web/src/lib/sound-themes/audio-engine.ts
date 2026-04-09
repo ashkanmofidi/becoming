@@ -113,47 +113,62 @@ export function playNoteSequence(
 }
 
 /**
- * Play activation chime. PRD Section 5.2.2: 528Hz, 200ms, Warm theme.
+ * Play activation chime. Gentle single note — not jarring.
+ * Soft sine wave, quick fade. Like a gentle "ding."
  */
 export function playActivationChime(theme: SoundTheme): void {
-  if (theme === 'silent') return;
-  const freq = theme === 'minimal' ? 440 : 528;
-  playTone(freq, 200, { volume: 0.5, type: theme === 'minimal' ? 'sine' : 'triangle' });
+  if (theme === 'silent' || !state.context || !state.masterGain) return;
+
+  const ctx = state.context;
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.type = 'sine';
+  osc.frequency.value = 440; // A4 — soft, familiar
+  gain.gain.value = 0.15; // Very quiet
+  gain.gain.setTargetAtTime(0, now + 0.15, 0.08); // Quick gentle fade
+
+  osc.connect(gain);
+  gain.connect(state.masterGain);
+  osc.start(now);
+  osc.stop(now + 0.4);
 }
 
 /**
- * Play completion bell. PRD Section 5.2.4: C5+E5, 600ms, reverb 400ms.
+ * Play completion bell. Gentle two-tone chime — warm and satisfying, not jarring.
+ * Soft sine waves with long decay.
  */
-export function playCompletionBell(theme: SoundTheme, volume = 0.6): void {
-  if (theme === 'silent') return;
+export function playCompletionBell(theme: SoundTheme, volume = 0.25): void {
+  if (theme === 'silent' || !state.context || !state.masterGain) return;
 
-  if (!state.context || !state.masterGain) return;
+  const ctx = state.context;
+  const now = ctx.currentTime;
 
-  const now = state.context.currentTime;
-
-  // C5 (523Hz)
-  const osc1 = state.context.createOscillator();
-  const gain1 = state.context.createGain();
+  // First note: C5 (523Hz) — soft sine
+  const osc1 = ctx.createOscillator();
+  const gain1 = ctx.createGain();
+  osc1.type = 'sine';
   osc1.frequency.value = 523;
-  osc1.type = theme === 'minimal' ? 'sine' : 'triangle';
-  gain1.gain.value = volume;
-  gain1.gain.setTargetAtTime(0, now + 0.6, 0.15);
+  gain1.gain.setValueAtTime(volume, now);
+  gain1.gain.setTargetAtTime(0, now + 0.8, 0.3); // Long gentle fade
   osc1.connect(gain1);
   gain1.connect(state.masterGain);
   osc1.start(now);
-  osc1.stop(now + 1.0);
+  osc1.stop(now + 1.5);
 
-  // E5 (659Hz)
-  const osc2 = state.context.createOscillator();
-  const gain2 = state.context.createGain();
+  // Second note: E5 (659Hz) — slightly delayed, quieter
+  const osc2 = ctx.createOscillator();
+  const gain2 = ctx.createGain();
+  osc2.type = 'sine';
   osc2.frequency.value = 659;
-  osc2.type = theme === 'minimal' ? 'sine' : 'triangle';
-  gain2.gain.value = volume * 0.8;
-  gain2.gain.setTargetAtTime(0, now + 0.6, 0.15);
+  gain2.gain.setValueAtTime(0, now);
+  gain2.gain.setValueAtTime(volume * 0.6, now + 0.15); // Starts after first note
+  gain2.gain.setTargetAtTime(0, now + 0.9, 0.3);
   osc2.connect(gain2);
   gain2.connect(state.masterGain);
   osc2.start(now);
-  osc2.stop(now + 1.0);
+  osc2.stop(now + 1.5);
 }
 
 /**
@@ -165,39 +180,59 @@ export function playBreakComplete(theme: SoundTheme): void {
 }
 
 /**
- * Play pause sound. PRD Section 5.2.5: D4→A3, 300ms.
+ * Play pause sound. Gentle descending tone.
  */
 export function playPauseSound(theme: SoundTheme): void {
   if (theme === 'silent') return;
   playNoteSequence([
-    { frequency: 294, durationMs: 150 }, // D4
-    { frequency: 220, durationMs: 150 }, // A3
-  ], { volume: 0.4 });
+    { frequency: 294, durationMs: 120 },
+    { frequency: 220, durationMs: 120 },
+  ], { volume: 0.15, type: 'sine' });
 }
 
 /**
- * Play resume sound. PRD Section 5.2.5: A3→D4, 300ms.
+ * Play resume sound. Gentle ascending tone.
  */
 export function playResumeSound(theme: SoundTheme): void {
   if (theme === 'silent') return;
   playNoteSequence([
-    { frequency: 220, durationMs: 150 }, // A3
-    { frequency: 294, durationMs: 150 }, // D4
-  ], { volume: 0.4 });
+    { frequency: 220, durationMs: 120 },
+    { frequency: 294, durationMs: 120 },
+  ], { volume: 0.15, type: 'sine' });
 }
 
 /**
- * Play tick sound. PRD Section 5.2.2: 50ms click, 20% volume.
+ * Play tick sound — water drop "blip."
+ * Sine wave starting at a higher pitch that drops quickly.
+ * Calm, zen-like, non-intrusive.
  */
-export function playTick(volume = 0.2): void {
-  playTone(800, 50, { volume, type: 'square' });
+export function playTick(volume = 0.08): void {
+  if (!state.context || !state.masterGain) return;
+
+  const ctx = state.context;
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+
+  osc.type = 'sine';
+  // Water drop: start high, pitch drops rapidly
+  osc.frequency.setValueAtTime(1800, now);
+  osc.frequency.exponentialRampToValueAtTime(400, now + 0.06);
+
+  gain.gain.setValueAtTime(volume, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+  osc.connect(gain);
+  gain.connect(state.masterGain);
+  osc.start(now);
+  osc.stop(now + 0.15);
 }
 
 /**
- * Play last-30s tick. PRD Section 5.2.3: 1Hz.
+ * Play last-30s tick — slightly louder water drop.
  */
 export function playLast30sTick(): void {
-  playTone(1000, 50, { volume: 0.3, type: 'square' });
+  playTick(0.12);
 }
 
 /**
