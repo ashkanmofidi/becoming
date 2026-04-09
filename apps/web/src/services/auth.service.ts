@@ -38,7 +38,7 @@ export const authService = {
     if (!response.ok) {
       const errorBody = await response.text();
       logger.error('Token exchange failed', { status: response.status, body: errorBody });
-      throw new Error('Failed to exchange authorization code');
+      throw new Error(`Token exchange ${response.status}: ${errorBody}`);
     }
 
     const data = await response.json();

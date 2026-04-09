@@ -8,3 +8,5 @@ dist
 .env.*.local
 .vercel
 v2-backup
+.secrets
+test-results
