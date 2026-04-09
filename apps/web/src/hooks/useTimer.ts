@@ -96,12 +96,15 @@ export function useTimer(options: UseTimerOptions): UseTimerReturn {
       setRemainingSeconds(remaining);
     } else if (state) {
       setRemainingSeconds(state.configuredDuration * 60);
+    } else {
+      // No timer state in KV — show the user's configured focus duration
+      setRemainingSeconds(options.defaultDurationMinutes * 60);
     }
 
     return () => {
       if (tickIntervalRef.current) clearInterval(tickIntervalRef.current);
     };
-  }, [state?.status, state?.startedAt, state?.pausedAt, state?.configuredDuration]);
+  }, [state?.status, state?.startedAt, state?.pausedAt, state?.configuredDuration, options.defaultDurationMinutes]);
 
   // Heartbeat interval (PRD 5.2.7: every 15 seconds)
   useEffect(() => {

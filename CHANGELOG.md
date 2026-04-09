@@ -1,5 +1,15 @@
 # Changelog
 
+## v3.1.12 (2026-04-09) - Eliminate 25:00 Flash on Load
+
+### Fixed
+- Timer showed 25:00 for a split second before loading user's saved duration (e.g., 1:00). Now shows a loading skeleton until settings are fetched — the first visible frame always shows the correct duration.
+- useTimer: when timer state is null (no active session), remainingSeconds now syncs to `options.defaultDurationMinutes` via useEffect dependency. Previously only set on initial useState (which captured the stale 25 default).
+
+### Changed
+- Timer page: loading gate extended from `isLoading` to `isLoading || !settings`. No timer UI renders until settings fetch is complete.
+- useTimer tick effect: added `options.defaultDurationMinutes` to dependency array so null-state display updates when settings arrive.
+
 ## v3.1.11 (2026-04-09) - Settings Persistence + Session Counting Fix
 
 ### Fixed

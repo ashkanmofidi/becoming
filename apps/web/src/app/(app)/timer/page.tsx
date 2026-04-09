@@ -334,7 +334,10 @@ export default function TimerPage() {
     enabled: settings?.dynamicFavicon ?? true,
   });
 
-  if (isLoading) {
+  // Show skeleton until BOTH timer state AND settings are loaded.
+  // Without settings, useTimer gets the wrong default duration (25 instead of user's saved value).
+  // This prevents the "flash of 25:00" before the real duration appears.
+  if (isLoading || !settings) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
         <div className="w-[280px] h-[280px] rounded-full bg-surface-900/50 animate-pulse" />
