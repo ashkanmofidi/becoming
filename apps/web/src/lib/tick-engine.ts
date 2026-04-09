@@ -120,6 +120,9 @@ export function stopTick(): void {
   }
 }
 
+/** Volume level (0-1) from master volume setting. */
+let volumeLevel = 1;
+
 /**
  * Set mute state. When muted, ticks still "schedule" (timing stays accurate)
  * but masterGain is 0 so nothing is audible.
@@ -127,7 +130,18 @@ export function stopTick(): void {
 export function setTickMuted(muted: boolean): void {
   isMuted = muted;
   if (masterGain && ctx) {
-    masterGain.gain.setTargetAtTime(muted ? 0 : 1, ctx.currentTime, 0.02);
+    masterGain.gain.setTargetAtTime(muted ? 0 : volumeLevel, ctx.currentTime, 0.02);
+  }
+}
+
+/**
+ * Set tick volume (0-100 from master volume slider).
+ * Applied in real time as the slider is dragged.
+ */
+export function setTickVolume(volume: number): void {
+  volumeLevel = volume / 100;
+  if (masterGain && ctx && !isMuted) {
+    masterGain.gain.setTargetAtTime(volumeLevel, ctx.currentTime, 0.02);
   }
 }
 

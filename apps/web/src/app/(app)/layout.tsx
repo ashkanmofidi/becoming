@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { SidebarWrapper } from '@/components/layout/SidebarWrapper';
 import { HeaderButtons } from '@/components/header/HeaderButtons';
 import { SettingsProvider } from '@/contexts/SettingsContext';
+import { AudioSyncProvider } from '@/components/audio/AudioSyncProvider';
 
 /**
  * Authenticated app layout. PRD Section 4.
@@ -23,6 +24,7 @@ export default async function AppLayout({
 
   return (
     <SettingsProvider>
+      <AudioSyncProvider />
       <div className="flex min-h-screen">
         <SidebarWrapper />
 
