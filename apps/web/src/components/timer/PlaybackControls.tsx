@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { TimerStatus } from '@becoming/shared';
 
 interface PlaybackControlsProps {
@@ -12,6 +13,7 @@ interface PlaybackControlsProps {
   onResume: () => void;
   onSkip: () => void;
   onSkipBreak: () => void;
+  onFinishEarly: () => void;
   onReset: () => void;
   onAbandon: () => void;
   onStopOvertime: () => void;
@@ -33,6 +35,7 @@ export function PlaybackControls({
   onResume,
   onSkip,
   onSkipBreak,
+  onFinishEarly,
   onReset,
   onAbandon,
   onStopOvertime,
@@ -41,6 +44,7 @@ export function PlaybackControls({
   const isStrictFocus = strictMode && isFocusMode;
   const isActive = status === 'running' || status === 'paused';
   const isBreakActive = isActive && !isFocusMode;
+  const [showMore, setShowMore] = useState(false);
 
   // Non-controller view (PRD 5.2.7)
   if (isActive && !isController) {
@@ -88,6 +92,7 @@ export function PlaybackControls({
   }
 
   return (
+    <>
     <div className="flex items-center justify-center gap-4">
       {/* Skip button (PRD: 40x40px) */}
       <button
@@ -136,17 +141,41 @@ export function PlaybackControls({
         <ResetIcon />
       </button>
 
-      {/* Skip Break — only visible during active break, prominent teal button */}
-      {isBreakActive && (
+      {/* More options toggle — secondary actions (Finish Early / Skip) */}
+      {isActive && !isStrictFocus && (
         <button
-          onClick={onSkipBreak}
-          className="ml-2 px-4 py-2 text-sm font-mono text-teal border border-teal/40 rounded-full hover:bg-teal/10 transition-all duration-200"
-          aria-label="Skip Break"
+          onClick={() => setShowMore(!showMore)}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-surface-500 hover:text-surface-300 transition-colors"
+          aria-label="More options"
+          title="More options"
         >
-          Skip Break →
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="3" cy="8" r="1.5" />
+            <circle cx="8" cy="8" r="1.5" />
+            <circle cx="13" cy="8" r="1.5" />
+          </svg>
         </button>
       )}
     </div>
+
+    {/* Expandable more options menu */}
+    {isActive && showMore && !isStrictFocus && (
+      <div className="flex items-center justify-center gap-3 mt-2">
+        <button
+          onClick={() => { setShowMore(false); onFinishEarly(); }}
+          className="px-3 py-1.5 text-xs font-mono text-amber border border-amber/30 rounded-full hover:bg-amber/10 transition-colors"
+        >
+          Finish Early
+        </button>
+        <button
+          onClick={() => { setShowMore(false); onSkip(); }}
+          className="px-3 py-1.5 text-xs font-mono text-surface-400 border border-surface-700 rounded-full hover:bg-surface-900 transition-colors"
+        >
+          Skip
+        </button>
+      </div>
+    )}
+    </>
   );
 }
 

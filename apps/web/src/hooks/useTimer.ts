@@ -25,6 +25,7 @@ interface UseTimerReturn {
     pause: () => Promise<void>;
     resume: () => Promise<void>;
     skip: () => Promise<void>;
+    finishEarly: () => Promise<void>;
     reset: () => Promise<void>;
     complete: () => Promise<void>;
     stopOvertime: () => Promise<void>;
@@ -185,6 +186,7 @@ export function useTimer(options: UseTimerOptions): UseTimerReturn {
     pause: async () => await apiCall('pause', {}),
     resume: async () => await apiCall('resume', {}),
     skip: async () => await apiCall('skip', {}),
+    finishEarly: async () => await apiCall('finishEarly', {}),
     reset: async () => await apiCall('reset', {}),
     complete: async () => await apiCall('complete', {}),
     stopOvertime: async () => await apiCall('stopOvertime', {}),

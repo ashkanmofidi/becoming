@@ -67,6 +67,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ state, session });
       }
 
+      case 'finishEarly': {
+        const { state, session } = await timerService.finishEarly(userId, deviceId);
+        return NextResponse.json({ state, session });
+      }
+
       case 'stopOvertime': {
         const { state, session } = await timerService.stopOvertime(userId, deviceId);
         return NextResponse.json({ state, session });

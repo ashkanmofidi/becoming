@@ -18,6 +18,7 @@ import { CycleTracker } from '@/components/timer/CycleTracker';
 import { IntentInput } from '@/components/timer/IntentInput';
 import { CategorySelector } from '@/components/timer/CategorySelector';
 import { ConfirmModal } from '@/components/timer/ConfirmModal';
+import { DailyFocusTime } from '@/components/timer/DailyFocusTime';
 import { startTick, stopTick, setTickMuted } from '@/lib/tick-engine';
 import { useSettings } from '@/contexts/SettingsContext';
 
@@ -242,17 +243,67 @@ export default function TimerPage() {
   }, [audio, actions, settings?.ambientSound, settings?.tickDuringFocus, settings?.tickDuringBreaks, state?.mode]);
 
   const handleSkip = useCallback(() => {
+    const mode = state?.mode;
+    const title = mode === 'focus' ? 'Skip this session?' : mode === 'long_break' ? 'Skip long break?' : 'Skip break?';
+    const message = mode === 'focus'
+      ? 'No time will be logged. Counter stays the same.'
+      : mode === 'long_break'
+        ? "Skip long break? You'll start a new focus cycle."
+        : "Skip break? You'll go straight to focus.";
+
     setConfirmModal({
       isOpen: true,
-      title: 'Skip session?',
-      message: "Skip? Won't count toward goal.",
+      title,
+      message,
       onConfirm: async () => {
-        await actions.skip();
         stopTick(); audio.stopAmbient();
+        await actions.skip();
         setConfirmModal((m) => ({ ...m, isOpen: false }));
       },
     });
-  }, [actions, audio]);
+  }, [actions, audio, state?.mode]);
+
+  const handleFinishEarly = useCallback(() => {
+    // Check elapsed time — if under 10 seconds, show "too short" prompt
+    const elapsed = state?.startedAt
+      ? Math.floor((Date.now() - new Date(state.startedAt).getTime()) / 1000)
+      : 0;
+
+    if (elapsed < 10) {
+      setConfirmModal({
+        isOpen: true,
+        title: 'Too short to log',
+        message: 'Less than 10 seconds elapsed. Skip instead?',
+        onConfirm: async () => {
+          stopTick(); audio.stopAmbient();
+          await actions.skip();
+          setConfirmModal((m) => ({ ...m, isOpen: false }));
+        },
+      });
+      return;
+    }
+
+    // Log partial session + optimistic update
+    const mode = state?.mode ?? 'focus';
+    stopTick(); audio.stopAmbient();
+
+    // Optimistic: add partial session to local state immediately
+    if (mode === 'focus') {
+      setTodaySessions((prev) => [
+        ...prev,
+        {
+          mode: 'focus',
+          status: 'completed',
+          deletedAt: null,
+          date: new Date().toISOString().split('T')[0] ?? '',
+          actualDuration: elapsed,
+        },
+      ]);
+    }
+
+    actions.finishEarly();
+    fetchTodaySessions(); // Background sync
+  }, [actions, audio, state?.startedAt, state?.mode, fetchTodaySessions]);
 
   const handleReset = useCallback(() => {
     setConfirmModal({
@@ -413,13 +464,8 @@ export default function TimerPage() {
         onPause={handlePause}
         onResume={handleResume}
         onSkip={handleSkip}
-        onSkipBreak={async () => {
-          // Skip break: log partial break, transition to focus idle — no confirmation needed
-          stopTick();
-          audio.stopAmbient();
-          await actions.skip();
-          fetchTodaySessions();
-        }}
+        onSkipBreak={() => handleSkip()}
+        onFinishEarly={handleFinishEarly}
         onReset={handleReset}
         onAbandon={handleAbandon}
         onStopOvertime={() => actions.stopOvertime()}
@@ -475,6 +521,20 @@ export default function TimerPage() {
 
       {/* Daily Goal (PRD 5.4) */}
       <DailyGoal completed={dailyGoal.completed} target={dailyGoal.target} />
+
+      {/* Daily Focus Time — only focus sessions count */}
+      <DailyFocusTime
+        totalMinutes={Math.round(
+          todaySessions
+            .filter((s) => s.mode === 'focus' && s.status === 'completed' && !s.deletedAt)
+            .reduce((sum, s) => sum + s.actualDuration, 0) / 60
+        )}
+        activeElapsedSeconds={
+          state?.status === 'running' && state?.mode === 'focus' && state?.startedAt
+            ? Math.max(0, Math.floor((Date.now() - new Date(state.startedAt).getTime()) / 1000))
+            : 0
+        }
+      />
 
       {/* Cycle Tracker (PRD 5.5) */}
       <CycleTracker

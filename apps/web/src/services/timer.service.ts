@@ -227,9 +227,42 @@ export const timerService = {
   },
 
   /**
-   * Skip current session. PRD Section 5.3.
-   * Transitions: running/paused → idle (next mode)
-   * Session marked abandoned, does NOT count toward goal.
+   * Finish Early — log a PARTIAL completed session with actual elapsed time.
+   * Counts toward daily goal and focus total. Transitions to next phase.
+   */
+  async finishEarly(userId: string, deviceId: string): Promise<{ state: TimerState; session: SessionRecord | null }> {
+    const state = await timerRepo.getState(userId);
+    if (!state || (state.status !== 'running' && state.status !== 'paused')) {
+      throw new InvalidStateError('Timer is not active');
+    }
+
+    assertController(state, deviceId);
+    const settings = await settingsRepo.get(userId);
+
+    // Log partial completed session (same as finalizeSession but no min-duration gate)
+    const session = await this.logPartialSession(userId, state);
+
+    // Advance to next mode
+    const nextMode = getNextMode(state.mode, state.cycleNumber, settings.cycleCount);
+    state.status = 'idle';
+    state.mode = nextMode;
+    state.startedAt = null;
+    state.pausedAt = null;
+    state.controllingDeviceId = null;
+    state.lastHeartbeatAt = null;
+    state.overtimeStartedAt = null;
+    state.configuredDuration = getDurationForMode(nextMode, settings);
+    if (nextMode === 'long_break') state.cycleNumber++;
+
+    await timerRepo.setState(userId, state);
+    logger.info('Timer finished early', { userId, mode: state.mode });
+    return { state, session };
+  },
+
+  /**
+   * Skip current session — NO log, NO credit, NO record.
+   * Zero time logged. Counter unchanged. Transitions to next phase.
+   * For breaks: jumps to focus. For focus: resets to fresh focus.
    */
   async skip(userId: string, deviceId: string): Promise<TimerState> {
     const state = await timerRepo.getState(userId);
@@ -239,14 +272,12 @@ export const timerService = {
 
     assertController(state, deviceId);
 
-    // Strict mode check (PRD 5.3: Skip hidden during strict focus)
     const settings = await settingsRepo.get(userId);
     if (settings.strictMode && state.mode === 'focus') {
       throw new StrictModeError('Cannot skip during strict focus mode');
     }
 
-    // Log abandoned session
-    await this.logAbandonedSession(userId, state, 'skip');
+    // NO session logged — skip means it never happened
 
     // Advance to next mode
     const nextMode = getNextMode(state.mode, state.cycleNumber, settings.cycleCount);
@@ -260,7 +291,7 @@ export const timerService = {
     state.configuredDuration = getDurationForMode(nextMode, settings);
 
     await timerRepo.setState(userId, state);
-    logger.info('Timer skipped', { userId });
+    logger.info('Timer skipped (no log)', { userId });
     return state;
   },
 
@@ -454,6 +485,44 @@ export const timerService = {
     };
 
     await sessionRepo.create(session);
+  },
+
+  /**
+   * Log a partial completed session (Finish Early).
+   * Status = 'completed', counts toward goals and daily total.
+   * No min-duration gate — user explicitly chose to log it.
+   */
+  async logPartialSession(
+    userId: string,
+    state: TimerState,
+  ): Promise<SessionRecord | null> {
+    if (!state.startedAt) return null;
+
+    const now = new Date();
+    const startTime = new Date(state.startedAt);
+    const elapsedSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+
+    const session: SessionRecord = {
+      id: `ses_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      userId,
+      date: startTime.toISOString().split('T')[0] ?? '',
+      startedAt: state.startedAt,
+      completedAt: now.toISOString(),
+      mode: state.mode,
+      configuredDuration: state.configuredDuration * 60,
+      actualDuration: elapsedSeconds,
+      overtimeDuration: 0,
+      intent: state.intent,
+      category: state.category,
+      status: 'completed', // Partial but still counts
+      notes: null,
+      deviceId: state.controllingDeviceId ?? 'unknown',
+      deletedAt: null,
+    };
+
+    await sessionRepo.create(session);
+    logger.info('Partial session logged', { userId, mode: state.mode, duration: elapsedSeconds });
+    return session;
   },
 };
 

@@ -371,7 +371,7 @@ describe('timerService integration', () => {
   // 5. Skip timer
   // -----------------------------------------------------------------------
   describe('skip', () => {
-    it('logs abandoned session and advances mode', async () => {
+    it('skips with NO log and advances mode', async () => {
       await startFocusTimer();
 
       vi.setSystemTime(new Date('2026-04-07T10:15:00.000Z'));
@@ -382,14 +382,11 @@ describe('timerService integration', () => {
       expect(state.startedAt).toBeNull();
       expect(state.controllingDeviceId).toBeNull();
 
-      // Verify abandoned session was stored
+      // Skip = NO session logged at all (changed from abandoned logging)
       const sessionKeys = [...getMockStore().keys()].filter((k) =>
         k.startsWith(`session:${USER_ID}:ses_`),
       );
-      expect(sessionKeys.length).toBe(1);
-      const session = getMockStore().get(sessionKeys[0]!) as Record<string, unknown>;
-      expect(session.status).toBe('abandoned');
-      expect(session.abandonReason).toBe('skip');
+      expect(sessionKeys.length).toBe(0);
     });
 
     it('works when timer is paused', async () => {
