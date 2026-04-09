@@ -9,6 +9,7 @@ import { useAudio } from '@/hooks/useAudio';
 import { useWakeLock } from '@/hooks/useWakeLock';
 import { useShortcuts } from '@/hooks/useShortcuts';
 import { useBroadcast } from '@/hooks/useBroadcast';
+import { useDynamicFavicon } from '@/hooks/useDynamicFavicon';
 import { ModeSelector } from '@/components/timer/ModeSelector';
 import { TimerRing } from '@/components/timer/TimerRing';
 import { PlaybackControls } from '@/components/timer/PlaybackControls';
@@ -318,14 +319,42 @@ export default function TimerPage() {
     state.status === 'idle' ||
     state.status === 'completed';
 
-  // Tab title (PRD 5.2.8)
+  // Dynamic tab title (PRD 5.2.8)
   useEffect(() => {
-    if (settings?.tabTitleTimer && state?.status === 'running') {
-      document.title = `${displayTime} — ${state.mode === 'focus' ? 'Focusing' : 'Break'} | Becoming..`;
-    } else {
-      document.title = 'Becoming.. | Enterprise Focus Timer';
+    if (!settings?.tabTitleTimer) {
+      document.title = 'Becoming.. | Focus Timer';
+      return;
     }
-  }, [displayTime, state?.status, state?.mode, settings?.tabTitleTimer]);
+
+    const timerStatus = state?.status ?? 'idle';
+    const intent = state?.intent;
+    const intentLabel = intent ? ` — ${intent}` : '';
+
+    switch (timerStatus) {
+      case 'running':
+        document.title = `▶ ${displayTime}${intentLabel} | Becoming..`;
+        break;
+      case 'paused':
+        document.title = `⏸ ${displayTime} — Paused | Becoming..`;
+        break;
+      case 'overtime':
+        document.title = `▶ ${displayTime} — Overtime | Becoming..`;
+        break;
+      case 'completed':
+        document.title = '✓ Done! | Becoming..';
+        break;
+      default:
+        document.title = 'Becoming.. | Focus Timer';
+    }
+  }, [displayTime, state?.status, state?.intent, settings?.tabTitleTimer]);
+
+  // Dynamic animated favicon (PRD 5.2.8)
+  useDynamicFavicon({
+    status: state?.status ?? 'idle',
+    mode: state?.mode ?? 'focus',
+    progress,
+    enabled: settings?.dynamicFavicon ?? true,
+  });
 
   if (isLoading) {
     return (

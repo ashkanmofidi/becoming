@@ -14,6 +14,8 @@
 - Activation chime suppressed when tick is ON (tick IS the rhythm — playing both is jarring).
 - Tick sound completely redesigned: two-layer water drop (filtered noise "blep" + 150Hz sine body), 1% volume, subliminal.
 - Added mute toggle button on timer page — instant sound control without going to Settings.
+- Dynamic animated favicon: canvas-based 32x32 with state-reactive visuals (pulsing amber/teal with draining ring when running, pause bars when paused, charcoal spark when idle, gold checkmark flash on completion).
+- Dynamic tab title: "▶ 24:59 — Deep Work | Becoming.." while running, "⏸ Paused", "✓ Done!", idle format. Shows intent if set.
 
 ### Changed
 - PRD.md: Added Sections 5.7.1-5.7.4 (sound behavior rules), updated Section 2 (instant navigation), Section 3 (sidebar profile card)

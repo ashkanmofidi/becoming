@@ -185,9 +185,21 @@ Heartbeat: controller sends every 15 seconds. 60 seconds without: controllingDev
 Simultaneous Play: first request processed, sets controller. Second rejected with toast.
 EDGE CASE: Multiple tabs same browser: BroadcastChannel API negotiates controller. Second tab sees "This session is controlled in another tab" + "Take over."
 5.2.8 Browser Background Behavior
-Tab title: "18:42 — Focusing | Becoming.." (updates via document.title every second).
+5.2.8.1 Dynamic Tab Title [CHANGED v3.1.1 - 2026-04-09]
+Running: "▶ 24:59 — Deep Work | Becoming.." (with intent if set, updates every second)
+Paused: "⏸ 12:30 — Paused | Becoming.."
+Overtime: "▶ +01:30 — Overtime | Becoming.."
+Completed: "✓ Done! | Becoming.."
+Idle: "Becoming.. | Focus Timer"
+Controlled by "Tab Title Timer" toggle in Display settings. Update synced to countdown tick.
+5.2.8.2 Dynamic Animated Favicon [CHANGED v3.1.1 - 2026-04-09]
+Canvas-based 32x32 animated favicon, updates via requestAnimationFrame when active.
+Focusing: vibrant pulsing amber radial gradient with white arc progress ring draining clockwise from 12 o'clock. Subtle breathing glow. Break mode: same but teal palette.
+Paused: desaturated muted background, slower dimmer pulse, frozen progress ring, white pause bars overlay.
+Idle: cool charcoal circle with minimal amber dot/spark in center, barely glowing.
+Completed: brief white→gold flash burst animation, settles into glowing gold circle with white checkmark.
+All transitions cinematic and smooth. Controlled by "Dynamic Favicon" toggle in Display settings.
 Completion while backgrounded: Notification API push with chime, "Focus session complete! Time for a break.", Becoming.. icon. Click brings tab to focus.
-Dynamic favicon via canvas: amber dot (active), gray dot (paused), green check (complete).
 On return: reconcile from server timestamps. 150ms crossfade for any visual discrepancy.
 Wake Lock API for screen-on (default ON). Fallback: silent audio loop. Released on completion/pause/navigate away.
 5.2.9 Accessibility
