@@ -5,48 +5,34 @@ import { createLogger } from '@/lib/logger';
 const logger = createLogger('auth-callback');
 
 /**
- * OAuth callback handler. PRD Section 1.2.1 steps 5-11.
+ * OAuth callback handler. PRD Section 1.2.1.
+ * Simplified: no PKCE (server has client_secret).
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get('code');
-  const state = searchParams.get('state');
   const error = searchParams.get('error');
 
   if (error) {
     logger.warn('OAuth error from Google', { error });
-    return NextResponse.redirect(
-      new URL('/login?error=oauth_failed', request.url),
-    );
+    return NextResponse.redirect(new URL('/login?error=oauth_failed', request.url));
   }
 
-  if (!code || !state) {
-    return NextResponse.redirect(
-      new URL('/login?error=missing_params', request.url),
-    );
+  if (!code) {
+    return NextResponse.redirect(new URL('/login?error=missing_code', request.url));
   }
 
   try {
-    // Exchange code for tokens (PRD 1.2.1 step 7)
-    // Note: code_verifier is sent by client in the state or a separate cookie
-    const codeVerifier = request.cookies.get('pkce_verifier')?.value;
-    if (!codeVerifier) {
-      return NextResponse.redirect(
-        new URL('/login?error=missing_verifier', request.url),
-      );
-    }
-
     const origin = request.nextUrl.origin;
-    const tokens = await authService.exchangeCodeForTokens(
-      code,
-      codeVerifier,
-      `${origin}/api/auth/callback`,
-    );
+    const redirectUri = `${origin}/api/auth/callback`;
 
-    // Decode ID token (PRD 1.2.1 step 8)
+    // Exchange code for tokens (no PKCE verifier needed with client_secret)
+    const tokens = await authService.exchangeCodeForTokens(code, redirectUri);
+
+    // Decode ID token
     const googleUser = await authService.decodeIdToken(tokens.idToken);
 
-    // Process callback (PRD 1.2.1 steps 9-11)
+    // Process callback — create user if needed, create session
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
     const userAgent = request.headers.get('user-agent') || 'unknown';
 
@@ -56,27 +42,22 @@ export async function GET(request: NextRequest) {
       userAgent,
     );
 
-    // Set session cookie (PRD 1.2.3)
+    // Set session cookie and redirect
     const redirectPath = needsTos ? '/tos' : '/timer';
     const response = NextResponse.redirect(new URL(redirectPath, request.url));
 
     response.cookies.set('bm_sid', session.token, {
       httpOnly: true,
       secure: true,
-      sameSite: 'strict',
+      sameSite: 'lax', // Changed from 'strict' — needs to work on redirect from Google
       path: '/',
       maxAge: 30 * 24 * 60 * 60,
     });
 
-    // Clear PKCE cookie
-    response.cookies.delete('pkce_verifier');
-
     return response;
   } catch (error) {
     if (error instanceof BetaCapReachedError) {
-      return NextResponse.redirect(
-        new URL('/login?error=beta_cap', request.url),
-      );
+      return NextResponse.redirect(new URL('/login?error=beta_cap', request.url));
     }
 
     const errMsg = error instanceof Error ? error.message : String(error);

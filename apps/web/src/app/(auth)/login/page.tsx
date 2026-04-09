@@ -1,39 +1,27 @@
 'use client';
 
-import { useEffect, useCallback, useState } from 'react';
+import { useState, useCallback } from 'react';
+
+const GOOGLE_CLIENT_ID = '115795527932-2q1afagsog0eg29pbdfn3qfs44e27uui.apps.googleusercontent.com';
 
 /**
  * Login page. PRD Section 1.1.
- * Minimal dark-themed login with Google OAuth.
+ * Simplified OAuth flow (no PKCE — we have a server-side client_secret).
  */
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleGoogleSignIn = useCallback(async () => {
+  const handleGoogleSignIn = useCallback(() => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Generate PKCE code verifier and challenge (PRD Section 1.2.1)
-      const codeVerifier = generateCodeVerifier();
-      const codeChallenge = await generateCodeChallenge(codeVerifier);
-      const state = generateState();
-
-      // Store PKCE verifier in cookie so the server callback can read it
-      document.cookie = `pkce_verifier=${codeVerifier}; path=/; max-age=600; secure; samesite=lax`;
-      document.cookie = `pkce_state=${state}; path=/; max-age=600; secure; samesite=lax`;
-
-      // Redirect to Google OAuth (PRD Section 1.2.1 step 3)
-      const GOOGLE_CLIENT_ID = '115795527932-2q1afagsog0eg29pbdfn3qfs44e27uui.apps.googleusercontent.com';
       const params = new URLSearchParams({
         client_id: GOOGLE_CLIENT_ID,
         redirect_uri: `${window.location.origin}/api/auth/callback`,
         response_type: 'code',
         scope: 'openid email profile',
-        code_challenge: codeChallenge,
-        code_challenge_method: 'S256',
-        state,
         access_type: 'offline',
         prompt: 'consent',
       });
@@ -47,7 +35,6 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4">
-      {/* Brand */}
       <h1 className="font-serif text-4xl md:text-5xl mb-2">
         Becoming<span className="text-amber">.</span><span className="text-amber">.</span>
       </h1>
@@ -55,7 +42,6 @@ export default function LoginPage() {
         ENTERPRISE FOCUS TIMER
       </p>
 
-      {/* Login Card (PRD: #111 bg, 12px rounded) */}
       <div className="w-full max-w-sm bg-bg-card rounded-xl p-8 border border-surface-900">
         <h2 className="text-white text-xl font-semibold mb-2 text-center">Welcome</h2>
         <p className="text-surface-500 text-sm text-center mb-8">
@@ -103,31 +89,4 @@ export default function LoginPage() {
       </div>
     </main>
   );
-}
-
-/** Generate PKCE code verifier (43-128 chars). PRD Section 1.2.1 step 2. */
-function generateCodeVerifier(): string {
-  const array = new Uint8Array(32);
-  crypto.getRandomValues(array);
-  return base64URLEncode(array);
-}
-
-/** Derive code challenge via SHA-256. PRD Section 1.2.1 step 2. */
-async function generateCodeChallenge(verifier: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(verifier);
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  return base64URLEncode(new Uint8Array(digest));
-}
-
-/** Generate random state for CSRF protection. PRD Section 1.2.1 step 3. */
-function generateState(): string {
-  const array = new Uint8Array(16);
-  crypto.getRandomValues(array);
-  return base64URLEncode(array);
-}
-
-function base64URLEncode(buffer: Uint8Array): string {
-  const base64 = btoa(String.fromCharCode(...buffer));
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }

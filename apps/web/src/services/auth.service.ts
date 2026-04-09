@@ -20,7 +20,6 @@ export const authService = {
    */
   async exchangeCodeForTokens(
     code: string,
-    codeVerifier: string,
     redirectUri: string,
   ): Promise<{ idToken: string; accessToken: string; refreshToken?: string }> {
     const response = await fetch('https://oauth2.googleapis.com/token', {
@@ -32,7 +31,6 @@ export const authService = {
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
         redirect_uri: redirectUri,
         grant_type: 'authorization_code',
-        code_verifier: codeVerifier,
       }),
     });
 
