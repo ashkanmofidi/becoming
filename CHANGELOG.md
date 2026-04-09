@@ -5,10 +5,13 @@
 ### Fixed
 - Timer idle state showed "00:00" instead of configured duration on first load (PRD Appendix C, Contradiction #1). useTimer hook now initializes remainingSeconds to 25*60 (default focus) before server state loads.
 - Rectangular blinking/flashing around timer ring caused by box-shadow on SVG element. Breathing glow animation now uses opacity-only transitions, eliminating the rectangle artifact.
+- Sound system: Tick During Focus now fires every second (was every minute). Tick During Breaks now implemented. Last 30s Ticking fires once per second (was every render frame). Haptic Last 10s now wired.
+- Slow page transitions: sidebar now uses Next.js Link for instant client-side navigation (was using <a> tags causing full page reloads).
+- Missing sidebar elements: Super Admin/Admin role badge, Logout button, Admin nav section (Analytics, Users, Feedback, Audit Log) now visible for admin/super_admin users.
 
 ### Changed
-- PRD.md: Added implementation notes for idle state fix and SVG glow constraint (Section 5.1.1)
-- TEST_CASES.md: Updated TMR-001 expected result to include no-rectangle-blink assertion
+- PRD.md: Added Sections 5.7.1-5.7.4 (sound behavior rules), updated Section 2 (instant navigation), Section 3 (sidebar profile card)
+- TEST_CASES.md: Updated TMR-001 expected result
 
 ## v3.1.0 (2026-04-08) - Full Rebuild
 

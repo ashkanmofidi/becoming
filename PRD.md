@@ -85,6 +85,7 @@ Persistent in top-left sidebar on all pages when authenticated.
 Version from env var APP_VERSION (never hardcoded). "ENTERPRISE BETA" from APP_LIFECYCLE_STAGE (changes to "ENTERPRISE" post-beta).
 Updates on next page load or within 60 seconds via polling. No user intervention. Silent update (no notification).
 Version string fetched from server on each load (not cached in service worker or localStorage).
+IMPLEMENTATION NOTE [ADDED v3.1.1 - 2026-04-09]: All sidebar navigation uses Next.js Link component for instant client-side transitions (no full page reload). Page transitions must feel instantaneous — under 100ms perceived latency. Active page indicated by amber text + amber left border + 10% amber background.
 
 3. User Identity & Role Card
 3.1 Profile Display
