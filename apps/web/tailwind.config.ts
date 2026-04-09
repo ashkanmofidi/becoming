@@ -47,8 +47,8 @@ const config: Config = {
       },
       keyframes: {
         breathingGlow: {
-          '0%, 100%': { opacity: '0.8', boxShadow: '0 0 0px currentColor' },
-          '50%': { opacity: '1', boxShadow: '0 0 8px currentColor' },
+          '0%, 100%': { opacity: '0.6' },
+          '50%': { opacity: '1' },
         },
         fadeCycle: {
           '0%, 100%': { opacity: '1' },

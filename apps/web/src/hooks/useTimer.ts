@@ -40,7 +40,7 @@ interface UseTimerReturn {
  */
 export function useTimer(options: UseTimerOptions): UseTimerReturn {
   const [state, setState] = useState<TimerState | null>(null);
-  const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [remainingSeconds, setRemainingSeconds] = useState(25 * 60); // Default to 25:00 until server state loads
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const deviceIdRef = useRef(getOrCreateDeviceId());

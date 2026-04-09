@@ -130,7 +130,8 @@ Primary interface and default landing page. Contains: mode selector, circular ti
 Three-segment pill: FOCUS | BREAK | LONG BREAK. Monospaced uppercase. Active: filled bg + white text. Inactive: no bg + muted gray. 150ms transition.
 5.1.1 Defaults
 Focus: 25:00. Break: 5:00. Long Break: 15:00. Active tab defaults to FOCUS on first login and each new day.
-CONTRADICTION FIX: Current screenshots show timer at "00:00" in idle. This is a BUG. Idle state MUST show the configured duration (e.g., "25:00"). The spec is authoritative; the implementation must be fixed.
+CONTRADICTION FIX: Current screenshots show timer at "00:00" in idle. This is a BUG. Idle state MUST show the configured duration (e.g., "25:00"). The spec is authoritative; the implementation must be fixed. [FIXED v3.1.1 - 2026-04-09] Timer display initializes to configured focus duration (25:00 default) before server state loads. Null server state (first-time user) also defaults to 25:00.
+IMPLEMENTATION NOTE [ADDED v3.1.1 - 2026-04-09]: The breathing glow animation on the idle timer ring MUST use opacity transitions only — not box-shadow. Box-shadow on SVG elements renders as a rectangle, not following the circular shape. The glow effect is achieved via opacity pulsing on the circular SVG ring stroke.
 5.1.2 Switching Behavior
 IDLE: instantly updates timer to selected mode's duration. No confirmation.
 RUNNING/PAUSED: confirmation modal: "Switching will reset your current session. This session will not be logged. Continue?" Confirmed: timer resets to new mode idle, session marked abandoned server-side.

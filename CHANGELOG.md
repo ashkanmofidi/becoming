@@ -1,5 +1,15 @@
 # Changelog
 
+## v3.1.1 (2026-04-09) - Post-Deploy Fixes
+
+### Fixed
+- Timer idle state showed "00:00" instead of configured duration on first load (PRD Appendix C, Contradiction #1). useTimer hook now initializes remainingSeconds to 25*60 (default focus) before server state loads.
+- Rectangular blinking/flashing around timer ring caused by box-shadow on SVG element. Breathing glow animation now uses opacity-only transitions, eliminating the rectangle artifact.
+
+### Changed
+- PRD.md: Added implementation notes for idle state fix and SVG glow constraint (Section 5.1.1)
+- TEST_CASES.md: Updated TMR-001 expected result to include no-rectangle-blink assertion
+
 ## v3.1.0 (2026-04-08) - Full Rebuild
 
 ### Added
