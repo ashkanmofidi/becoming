@@ -18,6 +18,7 @@ import { CycleTracker } from '@/components/timer/CycleTracker';
 import { IntentInput } from '@/components/timer/IntentInput';
 import { CategorySelector } from '@/components/timer/CategorySelector';
 import { ConfirmModal } from '@/components/timer/ConfirmModal';
+import { startTick, stopTick, setTickMuted } from '@/lib/tick-engine';
 
 /**
  * Timer page. PRD Section 5.
@@ -88,6 +89,9 @@ export default function TimerPage() {
   const audio = useAudio(settings, isMuted);
   const lastTickedSecondRef = useRef(-1); // For haptic dedup only
 
+  // Sync mute state to tick engine (singleton, lives outside React)
+  useEffect(() => { setTickMuted(isMuted); }, [isMuted]);
+
   // Timer hook
   const {
     state,
@@ -109,6 +113,7 @@ export default function TimerPage() {
       } else {
         audio.playBreakEnd();
       }
+      stopTick();
       audio.stopAmbient();
       fetchTodaySessions();
     },
@@ -124,6 +129,21 @@ export default function TimerPage() {
       }
     },
   });
+
+  // Tick engine: start/stop based on timer state and settings.
+  // The tick engine is a singleton module — survives navigation, no mount/unmount issues.
+  useEffect(() => {
+    const isRunning = state?.status === 'running';
+    const isFocus = state?.mode === 'focus';
+    const isBreak = state?.mode === 'break' || state?.mode === 'long_break';
+    const tickEnabled = (isFocus && settings?.tickDuringFocus) || (isBreak && settings?.tickDuringBreaks);
+
+    if (isRunning && tickEnabled) {
+      startTick();
+    } else {
+      stopTick();
+    }
+  }, [state?.status, state?.mode, settings?.tickDuringFocus, settings?.tickDuringBreaks]);
 
   // Wake Lock (PRD 6.7)
   const wakeLock = useWakeLock(
@@ -184,12 +204,14 @@ export default function TimerPage() {
 
     await audio.ensureInitialized();
 
-    // If tick is enabled, don't play activation chime — the tick IS the rhythm.
     const tickIsOn = (state?.mode === 'focus' && settings?.tickDuringFocus) ||
       (state?.mode !== 'focus' && settings?.tickDuringBreaks);
     if (!tickIsOn) {
       audio.playActivation();
     }
+
+    // Start tick immediately — don't wait for state update to trigger useEffect
+    if (tickIsOn) startTick();
 
     if (settings?.ambientSound && settings.ambientSound !== 'none' && state?.mode === 'focus') {
       audio.startAmbient();
@@ -199,6 +221,7 @@ export default function TimerPage() {
   }, [audio, wakeLock, actions, state?.mode, intent, category, settings?.ambientSound, settings?.tickDuringFocus, settings?.tickDuringBreaks]);
 
   const handlePause = useCallback(async () => {
+    stopTick();
     audio.playPause();
     audio.stopAmbient();
     await actions.pause();
@@ -206,11 +229,14 @@ export default function TimerPage() {
 
   const handleResume = useCallback(async () => {
     audio.playResume();
+    const tickIsOn = (state?.mode === 'focus' && settings?.tickDuringFocus) ||
+      (state?.mode !== 'focus' && settings?.tickDuringBreaks);
+    if (tickIsOn) startTick();
     if (settings?.ambientSound && settings.ambientSound !== 'none' && state?.mode === 'focus') {
       audio.startAmbient();
     }
     await actions.resume();
-  }, [audio, actions, settings?.ambientSound, state?.mode]);
+  }, [audio, actions, settings?.ambientSound, settings?.tickDuringFocus, settings?.tickDuringBreaks, state?.mode]);
 
   const handleSkip = useCallback(() => {
     setConfirmModal({
@@ -219,7 +245,7 @@ export default function TimerPage() {
       message: "Skip? Won't count toward goal.",
       onConfirm: async () => {
         await actions.skip();
-        audio.stopAmbient();
+        stopTick(); audio.stopAmbient();
         setConfirmModal((m) => ({ ...m, isOpen: false }));
       },
     });
@@ -232,7 +258,7 @@ export default function TimerPage() {
       message: `Reset to ${state?.configuredDuration ?? 25}:00?`,
       onConfirm: async () => {
         await actions.reset();
-        audio.stopAmbient();
+        stopTick(); audio.stopAmbient();
         setConfirmModal((m) => ({ ...m, isOpen: false }));
       },
     });
@@ -246,7 +272,7 @@ export default function TimerPage() {
       variant: 'destructive',
       onConfirm: async () => {
         await actions.reset();
-        audio.stopAmbient();
+        stopTick(); audio.stopAmbient();
         setConfirmModal((m) => ({ ...m, isOpen: false }));
       },
     });
@@ -260,7 +286,7 @@ export default function TimerPage() {
         message: 'Switching will reset your current session. This session will not be logged. Continue?',
         onConfirm: async () => {
           await actions.switchMode(mode);
-          audio.stopAmbient();
+          stopTick(); audio.stopAmbient();
           setConfirmModal((m) => ({ ...m, isOpen: false }));
         },
       });
@@ -397,7 +423,7 @@ export default function TimerPage() {
           setIsMuted(next);
           localStorage.setItem('bm_muted', String(next));
           if (next) {
-            audio.stopAmbient();
+            stopTick(); audio.stopAmbient();
           } else if (settings?.ambientSound && settings.ambientSound !== 'none' && state?.status === 'running' && state?.mode === 'focus') {
             audio.startAmbient();
           }

@@ -2,11 +2,11 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { SidebarWrapper } from '@/components/layout/SidebarWrapper';
 import { HeaderButtons } from '@/components/header/HeaderButtons';
-import { GlobalTickEngine } from '@/components/audio/GlobalTickEngine';
 
 /**
  * Authenticated app layout. PRD Section 4.
- * Cookie check server-side. User data fetched client-side in Sidebar.
+ * Tick engine is now a pure singleton module (lib/tick-engine.ts),
+ * NOT a React component. Called directly from timer page handlers.
  */
 export default async function AppLayout({
   children,
@@ -22,8 +22,6 @@ export default async function AppLayout({
 
   return (
     <div className="flex min-h-screen">
-      {/* Global tick engine: survives all navigation, plays ticks when session is running */}
-      <GlobalTickEngine />
       <SidebarWrapper />
 
       <main className="flex-1 min-h-screen">

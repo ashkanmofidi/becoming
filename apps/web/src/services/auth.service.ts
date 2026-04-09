@@ -159,6 +159,11 @@ export const authService = {
       logger.info('New user registered', { userId: googleUser.sub, email: googleUser.email });
     }
 
+    // Reset timer to focus mode on every fresh login.
+    // Prevents landing on break timer from a previous session's stale state.
+    const { timerRepo } = await import('../repositories/timer.repo');
+    await timerRepo.clearState(googleUser.sub);
+
     // Create session (PRD 1.2.2)
     const session = await this.createSession(user, userAgent, ip);
 
