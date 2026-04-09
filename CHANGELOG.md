@@ -1,5 +1,22 @@
 # Changelog
 
+## v3.1.14 (2026-04-09) - Tick Rebuilt from Scratch + Login Timer Reset
+
+### Changed (BREAKING: tick architecture)
+- **Deleted** `GlobalTickEngine.tsx` (React component approach — broken by design).
+- **New** `lib/tick-engine.ts` — pure singleton module, zero React dependency.
+- Uses Web Audio API scheduled timing (`audioContext.currentTime`) instead of setInterval.
+- Two methods: `startTick()` and `stopTick()`. Called directly from timer event handlers.
+- No mount/unmount logic, no navigation listeners, no visibility API.
+- Chris Wilson scheduling pattern: 25ms scheduler loop schedules ticks ahead using audio clock.
+- Survives all navigation: in-app links, browser back/forward, tab switch, mobile background.
+
+### Fixed
+- Tick delays on start: first tick now plays 0.5s after start (no instant burst).
+- Tick gaps on navigation: singleton doesn't care about React component lifecycle.
+- Double-tick: Web Audio scheduling is sample-accurate, not setInterval which drifts.
+- Break timer shown after login: timer state (which may be in break mode from previous session) is now cleared on every fresh login. User always lands on focus timer.
+
 ## v3.1.13 (2026-04-09) - P0 FIX: Sessions Now Count
 
 ### Root cause found
