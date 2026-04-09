@@ -19,6 +19,30 @@
 - 404 Not Found page (PRD Section 16.1)
 - Authenticated app shell with sidebar navigation (PRD Section 4)
 
+- Timer service: full state machine with 5 states (idle/running/paused/completed/overtime) (PRD Section 5)
+- Timer state transitions: start, pause, resume, skip, reset, complete, stopOvertime, abandon, switchMode (PRD Section 5.3)
+- Multi-device timer: heartbeat, takeOver, controller enforcement (PRD Section 5.2.7)
+- Strict Mode enforcement: no pause/skip/reset during focus (PRD Section 6.2)
+- Session service: filtered queries, CSV export (RFC 4180, UTF-8 BOM), bulk operations (PRD Section 8)
+- Timer API routes: /api/timer (GET state, POST actions), /api/sessions (CRUD+export), /api/settings (PRD Sections 5, 6, 8)
+- Timer page: full interactive UI with all PRD Section 5 components
+- Mode selector: three-segment pill (FOCUS/BREAK/LONG BREAK) with instant/confirmed switching (PRD Section 5.1)
+- Circular timer display: SVG ring with stroke-dashoffset, color warming, breathing glow, flip-clock digits (PRD Section 5.2)
+- Playback controls: Play/Pause/Skip/Reset with strict mode and multi-device variants (PRD Section 5.3)
+- Daily goal progress: X/Y display with progress bar, green completion, overflow indicator (PRD Section 5.4)
+- Pomodoro cycle tracker: computed dots from session data (PRD Section 5.5)
+- Intent input: 120-char limit, character counter, autocomplete-ready (PRD Section 5.6.1)
+- Category selector: dropdown with color dots and checkmark (PRD Section 5.6.2)
+- Confirmation modal: for destructive timer actions (skip/reset/switch/abandon)
+- Web Audio API sound engine: 4 themes (Warm/Minimal/Nature/Silent), completion bells, pause/resume tones, tick sounds, ambient (PRD Section 5.7)
+- useTimer hook: server-synced state machine with heartbeat and completion detection
+- useAudio hook: settings-aware sound playback with lazy initialization
+- useWakeLock hook: Screen Wake Lock API with silent audio fallback (PRD Section 6.7)
+- useBroadcast hook: BroadcastChannel for multi-tab sync (PRD Section 5.2.7)
+- useShortcuts hook: keyboard shortcut engine with 100ms debounce (PRD Section 6.6)
+- Tab title timer: dynamic "18:42 — Focusing | Becoming.." (PRD Section 5.2.8)
+- Loading skeleton for timer page
+
 ### Fixed
 - Contradiction #1: Timer idle now shows configured duration, not "00:00" (PRD Appendix C)
 - Contradiction #2: Logout relocated to profile card area (PRD Appendix C)

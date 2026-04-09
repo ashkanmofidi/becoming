@@ -1,7 +1,7 @@
 # Build Tracker - Becoming.. v3.1.0
 
-## Current Status: Phase 1 - Foundation
-## Overall Progress: 15% (6 of 40 features complete)
+## Current Status: Phase 2 - Timer Core (COMPLETE)
+## Overall Progress: 40% (16 of 40 features complete)
 ## Last Updated: 2026-04-08
 
 | Phase | Feature | PRD Section | Status | Tests Pass | Date |
@@ -15,14 +15,14 @@
 | 1 | Login Page UI | 1.1 | DONE | — | 4/8 |
 | 1 | TOS Page UI | 1.3 | DONE | — | 4/8 |
 | 1 | Tracking Documents | — | DONE | — | 4/8 |
-| 2 | Timer Service (State Machine) | 5.1-5.2 | PENDING | 0/34 | — |
+| 2 | Timer Service (State Machine) | 5.1-5.2 | DONE | 0/34 | 4/8 |
 | 2 | Timer Repository | 5.2.7 | DONE | — | 4/8 |
-| 2 | Session Service | 8 | PENDING | 0/19 | — |
-| 2 | Timer Page UI | 5 | PENDING | — | — |
-| 2 | Timer Animations | 5.2 | PENDING | — | — |
-| 2 | Sound System | 5.7 | PENDING | — | — |
-| 2 | Daily Goal + Cycle Tracker | 5.4-5.5 | PENDING | 0/9 | — |
-| 2 | Intent + Category Bar | 5.6 | PENDING | 0/11 | — |
+| 2 | Session Service | 8 | DONE | 0/19 | 4/8 |
+| 2 | Timer Page UI | 5 | DONE | — | 4/8 |
+| 2 | Timer Animations | 5.2 | DONE | — | 4/8 |
+| 2 | Sound System | 5.7 | DONE | — | 4/8 |
+| 2 | Daily Goal + Cycle Tracker | 5.4-5.5 | DONE | 0/9 | 4/8 |
+| 2 | Intent + Category Bar | 5.6 | DONE | 0/11 | 4/8 |
 | 3 | Settings Service | 6.0 | PENDING | 0/29 | — |
 | 3 | Settings Page UI | 6.1-6.15 | PENDING | — | — |
 | 4 | Dashboard Service | 7 | PENDING | 0/14 | — |
