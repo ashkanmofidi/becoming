@@ -79,9 +79,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    logger.error('OAuth callback failed', { error: String(error) });
+    const errMsg = error instanceof Error ? error.message : String(error);
+    logger.error('OAuth callback failed', { error: errMsg });
     return NextResponse.redirect(
-      new URL('/login?error=auth_failed', request.url),
+      new URL(`/login?error=auth_failed&detail=${encodeURIComponent(errMsg)}`, request.url),
     );
   }
 }
