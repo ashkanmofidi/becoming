@@ -382,9 +382,19 @@ export const timerService = {
       ? Math.floor((now.getTime() - new Date(state.overtimeStartedAt).getTime()) / 1000)
       : 0;
 
-    // PRD 6.1: Sessions under min countable are not logged
-    if (actualDurationSeconds < settings.minCountableSession * 60) {
-      logger.info('Session too short, not logged', { userId, duration: actualDurationSeconds });
+    // PRD 6.1: Sessions under min countable are not logged.
+    // Invariant: minCountableSession can never exceed the configured duration for this session.
+    // This catches stale settings where minCountable=10 but focus=1.
+    const effectiveMinCountable = Math.min(
+      settings.minCountableSession,
+      state.configuredDuration, // in minutes
+    );
+    if (actualDurationSeconds < effectiveMinCountable * 60) {
+      logger.info('Session too short, not logged', {
+        userId,
+        duration: actualDurationSeconds,
+        minCountable: effectiveMinCountable,
+      });
       return null;
     }
 

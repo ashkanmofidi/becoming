@@ -1,5 +1,29 @@
 # Changelog
 
+## v3.1.13 (2026-04-09) - P0 FIX: Sessions Now Count
+
+### Root cause found
+Settings API PUT route (`/api/settings`) called `settingsRepo.save()` directly, **bypassing** `settingsService.saveSettings()` which runs `validateAndEnforce()`. This meant when a user set `focusDuration: 1`, the `minCountableSession` stayed at its default of `10`. Every completed 1-minute session was silently discarded at line 386 of timer.service.ts: `actualDurationSeconds (60) < minCountableSession * 60 (600)` → return null.
+
+### The exact broken lines (before → after)
+**`/api/settings/route.ts` line 36:**
+```
+BEFORE: await settingsRepo.save(result.session.userId, settings);
+AFTER:  const validated = await settingsService.saveSettings(result.session.userId, settings);
+```
+
+**`timer.service.ts` line 386:**
+```
+BEFORE: if (actualDurationSeconds < settings.minCountableSession * 60)
+AFTER:  const effectiveMinCountable = Math.min(settings.minCountableSession, state.configuredDuration);
+        if (actualDurationSeconds < effectiveMinCountable * 60)
+```
+
+### Fixed
+- Settings API PUT now routes through `settingsService.saveSettings()` with full validation.
+- Settings API GET now routes through `settingsService.getSettings()` which validates on read (fixes stale data).
+- `finalizeSession` clamps `minCountableSession` to `configuredDuration` at point of use — catches stale settings that haven't been re-saved yet.
+
 ## v3.1.12 (2026-04-09) - Eliminate 25:00 Flash on Load
 
 ### Fixed

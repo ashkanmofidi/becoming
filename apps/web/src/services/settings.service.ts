@@ -15,7 +15,10 @@ export const settingsService = {
    * Get settings for a user. Returns migrated settings with defaults.
    */
   async getSettings(userId: string): Promise<UserSettings> {
-    return settingsRepo.get(userId);
+    const settings = await settingsRepo.get(userId);
+    // Always validate on read — catches stale data with broken invariants
+    // (e.g., minCountableSession=10 but focusDuration=1 from before the fix)
+    return this.validateAndEnforce(settings);
   },
 
   /**
