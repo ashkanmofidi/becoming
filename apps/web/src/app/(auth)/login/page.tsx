@@ -25,8 +25,9 @@ export default function LoginPage() {
       sessionStorage.setItem('pkce_state', state);
 
       // Redirect to Google OAuth (PRD Section 1.2.1 step 3)
+      const GOOGLE_CLIENT_ID = '115795527932-2q1afagsog0eg29pbdfn3qfs44e27uui.apps.googleusercontent.com';
       const params = new URLSearchParams({
-        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+        client_id: GOOGLE_CLIENT_ID,
         redirect_uri: `${window.location.origin}/api/auth/callback`,
         response_type: 'code',
         scope: 'openid email profile',
