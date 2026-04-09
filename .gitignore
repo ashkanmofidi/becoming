@@ -1,6 +1,10 @@
-node_modules/
-.vercel/
+node_modules
+.next
+.turbo
+dist
+*.tsbuildinfo
 .env
 .env.local
-.DS_Store
-package-lock.json
+.env.*.local
+.vercel
+v2-backup
