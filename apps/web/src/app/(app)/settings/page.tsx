@@ -184,9 +184,12 @@ export default function SettingsPage() {
             <p className="text-xs text-surface-500 italic">Sounds are disabled by Silent theme.</p>
           )}
           <Slider label="Master Volume" value={settings.masterVolume} onChange={(v) => update('masterVolume', v)} min={0} max={100} disabled={isSilentTheme} />
-          <Toggle label="Tick During Focus" enabled={settings.tickDuringFocus} onChange={(v) => update('tickDuringFocus', v)} disabled={isSilentTheme || isVolumeZero} />
-          <Toggle label="Tick During Breaks" enabled={settings.tickDuringBreaks} onChange={(v) => update('tickDuringBreaks', v)} disabled={isSilentTheme || isVolumeZero} />
-          <Toggle label="Last 30s Ticking" description="Audible countdown in final 30 seconds" enabled={settings.last30sTicking} onChange={(v) => update('last30sTicking', v)} disabled={isSilentTheme || isVolumeZero} />
+          <Toggle label="Tick During Focus" description="Soft tick every second while focusing" enabled={settings.tickDuringFocus} onChange={(v) => update('tickDuringFocus', v)} disabled={isSilentTheme || isVolumeZero} />
+          {settings.tickDuringFocus && settings.ambientSound !== 'none' && (
+            <p className="text-xs text-amber/70 -mt-2 ml-1">Tip: Ambient sound works best without ticking enabled</p>
+          )}
+          <Toggle label="Tick During Breaks" description="Soft tick every second during breaks" enabled={settings.tickDuringBreaks} onChange={(v) => update('tickDuringBreaks', v)} disabled={isSilentTheme || isVolumeZero} />
+          <Toggle label="Last 30s Ticking" description="Louder tick every second in final 30 seconds" enabled={settings.last30sTicking} onChange={(v) => update('last30sTicking', v)} disabled={isSilentTheme || isVolumeZero} />
           <Toggle label="Haptic Feedback" description="Vibration on mobile" enabled={settings.hapticEnabled} onChange={(v) => update('hapticEnabled', v)} />
           <Toggle label="Respect Silent Mode" description="Suppress sounds when device is silenced" enabled={settings.respectSilentMode} onChange={(v) => update('respectSilentMode', v)} />
           <Select label="Ambient Sound" value={settings.ambientSound} onChange={(v) => update('ambientSound', v as UserSettings['ambientSound'])} options={[

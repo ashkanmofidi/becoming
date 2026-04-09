@@ -231,12 +231,24 @@ EDGE CASE: Category renamed in Settings: all future sessions use the new name. A
 Web Audio API (not HTML <audio>). Preloaded buffers on session start. No autoplay on load (browser policy).
 Themes: Warm (default, bells/marimba), Minimal (sine waves), Nature (rain/bird), Silent (visual only).
 9 individual toggles: Activation Chime (ON), Pause/Resume (ON), Minute Tick (OFF), Last 30s Ticking (ON), Completion Chime (ON), Break Start (ON), Break End (ON), Goal Achievement (ON), Streak Milestone (ON).
+5.7.1 Tick Sound Behavior [UPDATED v3.1.1 - 2026-04-09]
+Tick During Focus: when ON, plays a soft tick sound EVERY SECOND during focus countdown. Not every minute — every second. This gives rhythmic awareness. Default OFF (most users find it distracting).
+Tick During Breaks: when ON, plays the same tick every second during break countdown. Default OFF.
+Last 30s Ticking: when ON, plays a slightly louder tick every second during the FINAL 30 seconds of any countdown (focus or break). Independent of the focus/break tick toggles. Default ON.
+CRITICAL IMPLEMENTATION: Ticks must fire exactly once per second, not on every render frame. Track the last tick second and only play when the integer second changes.
+5.7.2 Ambient Sound + Tick Interaction [ADDED v3.1.1 - 2026-04-09]
+FEATURE INTERACTION: Ambient Sound ON + Tick During Focus ON: both play simultaneously (they layer). However, the UX recommendation is that users who enable ambient sound typically want immersion — the tick can break that. The UI should show a hint: "Tip: Ambient sound works best without ticking enabled" when both are on. No auto-disable — let the user choose.
+FEATURE INTERACTION: Ambient Sound pauses when timer paused, resumes on resume. Fades 3s in/out. Does NOT play during breaks (focus-only).
+5.7.3 Sound Hierarchy [ADDED v3.1.1 - 2026-04-09]
+Priority order (highest to lowest): Silent Theme > Respect Silent Mode > Master Volume 0% > Individual Toggles.
+If Silent Theme is active: ALL sounds disabled, toggles grayed out with note "Sounds are disabled by Silent theme."
+If Respect Silent Mode is ON and device is silenced: ALL sounds suppressed, haptic vibration used as fallback for completion/pause/resume events.
+If Master Volume is 0%: behaves like Silent visually but toggle states preserved. Raising volume restores previous config.
+Individual toggles only matter when none of the above overrides are active.
 FEATURE INTERACTION: Completion Chime OFF + Desktop Notifications ON: in-app sound muted but browser notification still fires with sound. User is never silently abandoned.
-FEATURE INTERACTION: Sound Theme "Silent" + individual toggles: Silent overrides all. Individual toggles are grayed out with note: "Sounds are disabled by Silent theme."
-FEATURE INTERACTION: Master Volume at 0% behaves identically to Silent theme visually but individual toggle states are preserved (so raising volume restores previous config).
 Custom completion sound: .mp3/.wav/.ogg, max 500KB, 5 seconds. Cloud-stored. Preview + Reset to Default.
-Haptic Feedback (mobile only, auto-hidden desktop): completion (200ms), pause/resume (100ms), last 10s pulse (50ms/sec).
-Respect Silent Mode (default ON): device silenced → sounds suppressed, vibration fallback.
+5.7.4 Haptic Feedback [UPDATED v3.1.1 - 2026-04-09]
+Mobile only (auto-hidden on desktop). Sub-toggles: Completion (200ms vibration), Pause/Resume (100ms), Last 10s (50ms pulse every second during final 10 seconds). Haptic works independently of sound — even if sounds are silent, haptic still fires if enabled.
 Ambient Sound: None/White Noise/Brown Noise/Rain/Coffee Shop/Lo-Fi Beats/Forest. Separate volume (0-100%, default 30%). Fades 3 seconds in/out. Focus-only (not during breaks).
 
 6. Settings Page

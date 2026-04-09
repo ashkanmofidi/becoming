@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { TimerMode, UserSettings, Category } from '@becoming/shared';
 import { CATEGORY_DEFAULTS } from '@becoming/shared';
 import { getCycleStatus, getDailyGoalStatus } from '@becoming/shared';
@@ -79,6 +79,7 @@ export default function TimerPage() {
 
   // Audio
   const audio = useAudio(settings);
+  const lastTickedSecondRef = useRef(-1);
 
   // Timer hook
   const {
@@ -104,12 +105,30 @@ export default function TimerPage() {
       fetchTodaySessions();
     },
     onTick: (remaining) => {
-      // Urgency sounds (PRD 5.2.3)
+      // PRD 5.7.1: Ticks fire exactly once per second, not on every render frame
+      const currentSecond = Math.floor(remaining);
+      if (currentSecond === lastTickedSecondRef.current) return;
+      lastTickedSecondRef.current = currentSecond;
+
+      const isFocus = state?.mode === 'focus';
+      const isBreak = state?.mode === 'break' || state?.mode === 'long_break';
+
+      // PRD 5.7.1: Last 30s Ticking — every second in final 30s (any mode)
       if (remaining <= 30 && remaining > 0 && settings?.last30sTicking) {
         audio.playLast30s();
       }
-      if (remaining > 30 && state?.mode === 'focus' && settings?.tickDuringFocus) {
-        if (remaining % 60 === 0) audio.playMinuteTick();
+      // PRD 5.7.1: Tick During Focus — every second during focus (not last 30s to avoid double tick)
+      else if (isFocus && remaining > 30 && settings?.tickDuringFocus) {
+        audio.playMinuteTick();
+      }
+      // PRD 5.7.1: Tick During Breaks — every second during break
+      else if (isBreak && remaining > 30 && settings?.tickDuringBreaks) {
+        audio.playMinuteTick();
+      }
+
+      // PRD 5.7.4: Haptic Last 10s — 50ms pulse every second in final 10s
+      if (remaining <= 10 && remaining > 0) {
+        audio.playLast10sHaptic();
       }
     },
   });

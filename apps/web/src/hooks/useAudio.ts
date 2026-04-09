@@ -117,5 +117,12 @@ export function useAudio(settings: UserSettings | null) {
         triggerHaptic(200);
       }
     }, [settings?.hapticEnabled, settings?.hapticCompletion]),
+
+    /** PRD 5.7.4: Last 10s haptic pulse (50ms) */
+    playLast10sHaptic: useCallback(() => {
+      if (settings?.hapticEnabled && settings?.hapticLast10s) {
+        triggerHaptic(50);
+      }
+    }, [settings?.hapticEnabled, settings?.hapticLast10s]),
   };
 }
