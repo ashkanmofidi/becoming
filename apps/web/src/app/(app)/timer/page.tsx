@@ -464,7 +464,11 @@ export default function TimerPage() {
         onPause={handlePause}
         onResume={handleResume}
         onSkip={handleSkip}
-        onSkipBreak={() => handleSkip()}
+        onSkipBreak={async () => {
+          // Break skip: no confirmation needed — immediate transition to focus
+          stopTick(); audio.stopAmbient();
+          await actions.skip();
+        }}
         onFinishEarly={handleFinishEarly}
         onReset={handleReset}
         onAbandon={handleAbandon}

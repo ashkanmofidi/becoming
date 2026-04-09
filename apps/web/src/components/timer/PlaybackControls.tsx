@@ -94,12 +94,21 @@ export function PlaybackControls({
   return (
     <>
     <div className="flex items-center justify-center gap-4">
-      {/* Skip button (PRD: 40x40px) */}
+      {/* Skip icon — contextual behavior:
+          Focus: skip with confirmation (onSkip)
+          Break/Long Break: skip immediately, no confirmation (onSkipBreak) */}
       <button
-        onClick={onSkip}
-        disabled={status === 'idle'}
-        className="w-10 h-10 rounded-full flex items-center justify-center text-surface-300 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        aria-label="Skip"
+        onClick={isFocusMode ? onSkip : onSkipBreak}
+        disabled={status === 'idle' || status === 'completed'}
+        className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+          status === 'idle' || status === 'completed'
+            ? 'text-surface-700 cursor-not-allowed'
+            : isBreakActive
+              ? 'text-teal hover:text-teal-dark hover:bg-teal/10'
+              : 'text-surface-300 hover:text-white'
+        }`}
+        aria-label={isFocusMode ? 'Skip Session' : 'Skip to Focus'}
+        title={isFocusMode ? 'Skip Session' : 'Skip to Focus'}
       >
         <SkipIcon />
       </button>
