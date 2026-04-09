@@ -10,6 +10,7 @@ import {
   setTheme as setEngineTheme,
   startAmbientSound,
   stopAmbientSound,
+  setAmbientVolume,
 } from '@/lib/sound-themes/audio-engine';
 import { startTick, stopTick, setTickMuted, setTickVolume, isTickRunning } from '@/lib/tick-engine';
 
@@ -83,8 +84,9 @@ export function useAudioSync() {
       stopAmbientSound();
       ambientActiveRef.current = false;
     } else if (shouldAmbient && ambientActiveRef.current) {
-      // Ambient is playing but settings changed — restart with new settings
-      // (handles ambient sound type change or volume change)
+      // Volume change only → just update gain, don't restart
+      setAmbientVolume(settings.ambientVolume);
+      // Type change → restart with new track (startAmbientSound handles same-type no-op)
       startAmbientSound(settings.ambientSound, settings.ambientVolume);
     }
   }, [settings]);

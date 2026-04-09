@@ -1,222 +1,209 @@
 /**
- * Audio engine — uses REAL sound files, not oscillators.
+ * Audio engine v3 — real sound files, proper looping, buffer cache.
  *
- * All sounds sourced from CC0/royalty-free libraries:
- * - Notification chimes: github.com/akx/Notifications (CC0/CC-BY)
- * - Rain ambient: opengameart.org (CC0)
- * - Forest ambient: opengameart.org by TinyWorlds (CC0)
- * - Ocean waves: opengameart.org by jasinski (CC0)
- * - White/brown noise: generated via ffmpeg (no copyright)
+ * All sounds are OGG files in /public/sounds/, loaded via fetch + decodeAudioData.
+ * Buffers are cached after first load.
  *
- * Architecture: single AudioContext + masterGain node.
- * Mute sets masterGain = 0. All sounds route through it.
+ * Ambient sounds use AudioBufferSourceNode.loop = true for gapless looping.
+ * Event sounds (chimes) play once and auto-dispose.
  */
 
 type SoundTheme = 'warm' | 'minimal' | 'nature' | 'silent';
 
-interface EngineState {
+interface State {
   ctx: AudioContext | null;
   masterGain: GainNode | null;
-  bufferCache: Map<string, AudioBuffer>;
+  buffers: Map<string, AudioBuffer>;
   ambientSource: AudioBufferSourceNode | null;
   ambientGain: GainNode | null;
-  initialized: boolean;
+  ambientType: string;
   muted: boolean;
   volume: number;
   theme: SoundTheme;
+  initialized: boolean;
 }
 
-const state: EngineState = {
+const S: State = {
   ctx: null,
   masterGain: null,
-  bufferCache: new Map(),
+  buffers: new Map(),
   ambientSource: null,
   ambientGain: null,
-  initialized: false,
+  ambientType: 'none',
   muted: false,
   volume: 0.6,
   theme: 'warm',
+  initialized: false,
 };
 
-// Sound file paths
-const SOUNDS = {
-  // Tick variants
-  'tick-soft': '/sounds/tick-soft.ogg',
-  'tick-classic': '/sounds/tick-classic.ogg',
-  'tick-sharp': '/sounds/tick-sharp.ogg',
-  // Chimes
-  'chime-start': '/sounds/chime-start.ogg',
-  'chime-completion': '/sounds/chime-completion.ogg',
-  'chime-break': '/sounds/chime-break.ogg',
-  'chime-pause': '/sounds/chime-pause.ogg',
-  'chime-resume': '/sounds/chime-resume.ogg',
-  'chime-achievement': '/sounds/chime-achievement.ogg',
-  // Ambient
-  'ambient-rain': '/sounds/ambient-rain.ogg',
-  'ambient-forest': '/sounds/ambient-forest.ogg',
-  'ambient-ocean': '/sounds/ambient-ocean.ogg',
-  'ambient-whitenoise': '/sounds/ambient-whitenoise.ogg',
-  'ambient-brownnoise': '/sounds/ambient-brownnoise.ogg',
-} as const;
-
-type SoundKey = keyof typeof SOUNDS;
+const AMBIENT_FILES: Record<string, string> = {
+  rain: '/sounds/ambient-rain.ogg',
+  forest: '/sounds/ambient-forest.ogg',
+  white_noise: '/sounds/ambient-whitenoise.ogg',
+  brown_noise: '/sounds/ambient-brownnoise.ogg',
+  coffee_shop: '/sounds/ambient-brownnoise.ogg',
+  lofi_beats: '/sounds/ambient-brownnoise.ogg',
+};
 
 function shouldPlay(): boolean {
-  return state.initialized && !state.muted && state.theme !== 'silent' &&
-    state.ctx !== null && state.masterGain !== null;
+  return S.initialized && !S.muted && S.theme !== 'silent';
 }
 
 // ─── Lifecycle ───────────────────────────────────────────────
 
 export function initAudioEngine(masterVolume: number): void {
-  if (state.initialized) return;
-  state.ctx = new AudioContext();
-  state.masterGain = state.ctx.createGain();
-  state.volume = masterVolume / 100;
-  state.masterGain.gain.value = state.muted ? 0 : state.volume;
-  state.masterGain.connect(state.ctx.destination);
-  state.initialized = true;
+  if (S.initialized) return;
+  S.ctx = new AudioContext();
+  S.masterGain = S.ctx.createGain();
+  S.volume = masterVolume / 100;
+  S.masterGain.gain.value = S.muted ? 0 : S.volume;
+  S.masterGain.connect(S.ctx.destination);
+  S.initialized = true;
 }
 
 export async function resumeContext(): Promise<void> {
-  if (state.ctx?.state === 'suspended') await state.ctx.resume();
+  if (S.ctx?.state === 'suspended') await S.ctx.resume();
 }
 
 export function destroyAudioEngine(): void {
   stopAmbientSound();
-  state.ctx?.close();
-  state.ctx = null;
-  state.masterGain = null;
-  state.bufferCache.clear();
-  state.initialized = false;
+  S.ctx?.close();
+  S.ctx = null;
+  S.masterGain = null;
+  S.buffers.clear();
+  S.initialized = false;
 }
 
 // ─── Buffer Loading ──────────────────────────────────────────
 
-async function loadBuffer(key: SoundKey): Promise<AudioBuffer | null> {
-  if (state.bufferCache.has(key)) return state.bufferCache.get(key)!;
-  if (!state.ctx) return null;
-
+async function getBuffer(path: string): Promise<AudioBuffer | null> {
+  if (S.buffers.has(path)) return S.buffers.get(path)!;
+  if (!S.ctx) return null;
   try {
-    const response = await fetch(SOUNDS[key]);
-    if (!response.ok) return null;
-    const arrayBuffer = await response.arrayBuffer();
-    const audioBuffer = await state.ctx.decodeAudioData(arrayBuffer);
-    state.bufferCache.set(key, audioBuffer);
-    return audioBuffer;
-  } catch {
-    return null;
-  }
+    const res = await fetch(path);
+    if (!res.ok) return null;
+    const buf = await S.ctx.decodeAudioData(await res.arrayBuffer());
+    S.buffers.set(path, buf);
+    return buf;
+  } catch { return null; }
 }
 
-/** Play a loaded buffer once through the master gain. */
-function playBuffer(buffer: AudioBuffer, volume = 1): void {
-  if (!state.ctx || !state.masterGain) return;
-  const source = state.ctx.createBufferSource();
-  const gain = state.ctx.createGain();
-  gain.gain.value = volume;
-  source.buffer = buffer;
-  source.connect(gain);
-  gain.connect(state.masterGain);
-  source.start();
+function playOnce(buffer: AudioBuffer, vol = 1): void {
+  if (!S.ctx || !S.masterGain) return;
+  const src = S.ctx.createBufferSource();
+  const g = S.ctx.createGain();
+  g.gain.value = vol;
+  src.buffer = buffer;
+  src.connect(g);
+  g.connect(S.masterGain);
+  src.start();
 }
 
 // ─── Master Controls ─────────────────────────────────────────
 
 export function setMuted(muted: boolean): void {
-  state.muted = muted;
-  if (state.masterGain && state.ctx) {
-    state.masterGain.gain.setTargetAtTime(muted ? 0 : state.volume, state.ctx.currentTime, 0.02);
+  S.muted = muted;
+  if (S.masterGain && S.ctx) {
+    S.masterGain.gain.setTargetAtTime(muted ? 0 : S.volume, S.ctx.currentTime, 0.02);
   }
 }
 
 export function setMasterVolume(volume: number): void {
-  state.volume = volume / 100;
-  if (state.masterGain && state.ctx && !state.muted) {
-    state.masterGain.gain.setTargetAtTime(state.volume, state.ctx.currentTime, 0.05);
+  S.volume = volume / 100;
+  if (S.masterGain && S.ctx && !S.muted) {
+    S.masterGain.gain.setTargetAtTime(S.volume, S.ctx.currentTime, 0.05);
   }
 }
 
 export function setTheme(theme: SoundTheme): void {
-  state.theme = theme;
+  S.theme = theme;
 }
 
 // ─── Event Sounds ────────────────────────────────────────────
 
 export async function playActivationChime(): Promise<void> {
   if (!shouldPlay()) return;
-  const buffer = await loadBuffer('chime-start');
-  if (buffer) playBuffer(buffer, 0.6);
+  const buf = await getBuffer('/sounds/chime-start.ogg');
+  if (buf) playOnce(buf, 0.6);
 }
 
-export async function playCompletionBell(volume = 0.7): Promise<void> {
+export async function playCompletionBell(vol = 0.7): Promise<void> {
   if (!shouldPlay()) return;
-  const buffer = await loadBuffer('chime-completion');
-  if (buffer) playBuffer(buffer, volume);
+  const buf = await getBuffer('/sounds/chime-completion.ogg');
+  if (buf) playOnce(buf, vol);
 }
 
 export async function playBreakComplete(): Promise<void> {
   if (!shouldPlay()) return;
-  const buffer = await loadBuffer('chime-break');
-  if (buffer) playBuffer(buffer, 0.6);
+  const buf = await getBuffer('/sounds/chime-break.ogg');
+  if (buf) playOnce(buf, 0.6);
 }
 
 export async function playPauseSound(): Promise<void> {
   if (!shouldPlay()) return;
-  const buffer = await loadBuffer('chime-pause');
-  if (buffer) playBuffer(buffer, 0.4);
+  const buf = await getBuffer('/sounds/chime-pause.ogg');
+  if (buf) playOnce(buf, 0.4);
 }
 
 export async function playResumeSound(): Promise<void> {
   if (!shouldPlay()) return;
-  const buffer = await loadBuffer('chime-resume');
-  if (buffer) playBuffer(buffer, 0.4);
+  const buf = await getBuffer('/sounds/chime-resume.ogg');
+  if (buf) playOnce(buf, 0.4);
 }
 
-// ─── Ambient Sound ───────────────────────────────────────────
-
-const AMBIENT_MAP: Record<string, SoundKey | null> = {
-  'none': null,
-  'white_noise': 'ambient-whitenoise',
-  'brown_noise': 'ambient-brownnoise',
-  'rain': 'ambient-rain',
-  'coffee_shop': 'ambient-brownnoise', // Reuse brown noise as cafe ambience
-  'lofi_beats': 'ambient-brownnoise',
-  'forest': 'ambient-forest',
-};
+// ─── Ambient Sound (looping) ─────────────────────────────────
 
 export async function startAmbientSound(type: string, volume: number): Promise<void> {
-  if (!state.ctx || !state.masterGain) return;
+  if (!S.ctx || !S.masterGain || type === 'none') return;
+
+  // If same type is already playing, just update volume
+  if (S.ambientSource && S.ambientType === type && S.ambientGain) {
+    S.ambientGain.gain.setTargetAtTime(volume / 100, S.ctx.currentTime, 0.3);
+    return;
+  }
+
+  // Stop current ambient (with quick fade)
   stopAmbientSound();
 
-  const key = AMBIENT_MAP[type];
-  if (!key) return;
+  const filePath = AMBIENT_FILES[type];
+  if (!filePath) return;
 
-  const buffer = await loadBuffer(key);
-  if (!buffer) return;
+  const buf = await getBuffer(filePath);
+  if (!buf || !S.ctx || !S.masterGain) return;
 
-  state.ambientGain = state.ctx.createGain();
-  state.ambientGain.gain.value = 0;
-  state.ambientGain.connect(state.masterGain);
+  // Create looping source
+  S.ambientGain = S.ctx.createGain();
+  S.ambientGain.gain.value = 0; // Start silent
+  S.ambientGain.connect(S.masterGain);
 
-  state.ambientSource = state.ctx.createBufferSource();
-  state.ambientSource.buffer = buffer;
-  state.ambientSource.loop = true;
-  state.ambientSource.connect(state.ambientGain);
-  state.ambientSource.start();
+  S.ambientSource = S.ctx.createBufferSource();
+  S.ambientSource.buffer = buf;
+  S.ambientSource.loop = true; // CRITICAL: seamless looping
+  S.ambientSource.connect(S.ambientGain);
+  S.ambientSource.start();
+  S.ambientType = type;
 
-  // Fade in over 2 seconds
-  state.ambientGain.gain.setTargetAtTime(volume / 100, state.ctx.currentTime, 0.7);
+  // Fade in over 1.5 seconds
+  S.ambientGain.gain.setTargetAtTime(volume / 100, S.ctx.currentTime, 0.5);
 }
 
 export function stopAmbientSound(): void {
-  if (state.ambientGain && state.ctx) {
-    state.ambientGain.gain.setTargetAtTime(0, state.ctx.currentTime, 0.3);
+  if (S.ambientGain && S.ctx) {
+    // Fade out over 500ms
+    S.ambientGain.gain.setTargetAtTime(0, S.ctx.currentTime, 0.15);
   }
+  const src = S.ambientSource;
   setTimeout(() => {
-    try { state.ambientSource?.stop(); } catch { /* already stopped */ }
-    state.ambientSource = null;
-  }, 1500);
+    try { src?.stop(); } catch { /* already stopped */ }
+  }, 800);
+  S.ambientSource = null;
+  S.ambientType = 'none';
+}
+
+export function setAmbientVolume(volume: number): void {
+  if (S.ambientGain && S.ctx) {
+    S.ambientGain.gain.setTargetAtTime(volume / 100, S.ctx.currentTime, 0.05);
+  }
 }
 
 // ─── Haptic ──────────────────────────────────────────────────
