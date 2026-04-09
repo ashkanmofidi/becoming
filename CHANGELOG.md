@@ -1,5 +1,17 @@
 # Changelog
 
+## v3.1.2 (2026-04-09) - Audio Overhaul
+
+### Changed
+- Complete audio engine rewrite: all sounds route through single master gain node — mute sets gain=0 at source, no per-call-site checks
+- Tick sound replaced with handpan-style D4 (293.66Hz) triangle wave + A4 overtone, 5ms attack, 450ms natural decay — meditative, not mechanical
+- All event sounds (activation, completion, pause, resume) redesigned as handpan/tongue-drum character
+- Mute button redesigned: speaker icon with waves/X, persists to localStorage, prominent visual styling
+
+### Fixed
+- Mute gate now covers 100% of audio triggers (22 call sites audited) — zero sound leaks when muted
+- Muting before Start now silences everything including start chime
+
 ## v3.1.1 (2026-04-09) - Post-Deploy Fixes
 
 ### Fixed

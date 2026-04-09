@@ -1,6 +1,9 @@
 /**
  * Web Audio API sound engine. PRD Section 5.7.
- * Uses Web Audio API (not HTML5 <audio>). Preloaded buffers on session start.
+ *
+ * Architecture: ALL audio routes through a single masterGain node.
+ * Mute sets masterGain.value = 0. Unmute restores it.
+ * This is the ONE source of truth for audio on/off — no per-call-site checks.
  */
 
 type SoundTheme = 'warm' | 'minimal' | 'nature' | 'silent';
@@ -8,329 +11,280 @@ type SoundTheme = 'warm' | 'minimal' | 'nature' | 'silent';
 interface AudioEngineState {
   context: AudioContext | null;
   masterGain: GainNode | null;
-  ambientSource: AudioBufferSourceNode | null;
   ambientGain: GainNode | null;
   initialized: boolean;
+  muted: boolean;
+  volume: number; // Stored so unmute can restore
 }
 
 const state: AudioEngineState = {
   context: null,
   masterGain: null,
-  ambientSource: null,
   ambientGain: null,
   initialized: false,
+  muted: false,
+  volume: 0.6,
 };
 
-/**
- * Initialize the audio context. Must be called from a user gesture.
- * PRD: No autoplay on load (browser policy).
- */
+// ─── Lifecycle ───────────────────────────────────────────────
+
 export function initAudioEngine(masterVolume: number): void {
   if (state.initialized) return;
-
   state.context = new AudioContext();
   state.masterGain = state.context.createGain();
-  state.masterGain.gain.value = masterVolume / 100;
+  state.volume = masterVolume / 100;
+  state.masterGain.gain.value = state.muted ? 0 : state.volume;
   state.masterGain.connect(state.context.destination);
   state.initialized = true;
 }
 
-/**
- * Ensure context is running (may be suspended by browser).
- */
 export async function resumeContext(): Promise<void> {
   if (state.context?.state === 'suspended') {
     await state.context.resume();
   }
 }
 
-/**
- * Set master volume (0-100). PRD Section 6.4.
- */
-export function setMasterVolume(volume: number): void {
-  if (state.masterGain) {
-    state.masterGain.gain.setTargetAtTime(volume / 100, state.context!.currentTime, 0.05);
-  }
-}
-
-/**
- * Play a tone at a given frequency and duration.
- */
-export function playTone(
-  frequency: number,
-  durationMs: number,
-  options?: { volume?: number; type?: string; fadeOut?: number },
-): void {
-  if (!state.context || !state.masterGain) return;
-
-  const osc = state.context.createOscillator();
-  const gain = state.context.createGain();
-
-  osc.type = (options?.type ?? 'sine') as OscillatorType;
-  osc.frequency.value = frequency;
-  gain.gain.value = options?.volume ?? 0.6;
-
-  osc.connect(gain);
-  gain.connect(state.masterGain);
-
-  const now = state.context.currentTime;
-  const duration = durationMs / 1000;
-  const fadeOut = (options?.fadeOut ?? durationMs * 0.3) / 1000;
-
-  gain.gain.setTargetAtTime(0, now + duration - fadeOut, fadeOut / 3);
-
-  osc.start(now);
-  osc.stop(now + duration);
-}
-
-/**
- * Play two notes in sequence (e.g., pause D4→A3, resume A3→D4).
- */
-export function playNoteSequence(
-  notes: { frequency: number; durationMs: number }[],
-  options?: { volume?: number; type?: string },
-): void {
-  if (!state.context || !state.masterGain) return;
-
-  let startTime = state.context.currentTime;
-  for (const note of notes) {
-    const osc = state.context.createOscillator();
-    const gain = state.context.createGain();
-    osc.type = (options?.type ?? 'sine') as OscillatorType;
-    osc.frequency.value = note.frequency;
-    gain.gain.value = options?.volume ?? 0.6;
-
-    osc.connect(gain);
-    gain.connect(state.masterGain!);
-
-    const duration = note.durationMs / 1000;
-    gain.gain.setTargetAtTime(0, startTime + duration * 0.7, duration * 0.1);
-
-    osc.start(startTime);
-    osc.stop(startTime + duration);
-    startTime += duration;
-  }
-}
-
-/**
- * Play activation chime. Gentle single note — not jarring.
- * Soft sine wave, quick fade. Like a gentle "ding."
- */
-export function playActivationChime(theme: SoundTheme): void {
-  if (theme === 'silent' || !state.context || !state.masterGain) return;
-
-  const ctx = state.context;
-  const now = ctx.currentTime;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-
-  osc.type = 'sine';
-  osc.frequency.value = 440; // A4 — soft, familiar
-  gain.gain.value = 0.15; // Very quiet
-  gain.gain.setTargetAtTime(0, now + 0.15, 0.08); // Quick gentle fade
-
-  osc.connect(gain);
-  gain.connect(state.masterGain);
-  osc.start(now);
-  osc.stop(now + 0.4);
-}
-
-/**
- * Play completion bell. Gentle two-tone chime — warm and satisfying, not jarring.
- * Soft sine waves with long decay.
- */
-export function playCompletionBell(theme: SoundTheme, volume = 0.25): void {
-  if (theme === 'silent' || !state.context || !state.masterGain) return;
-
-  const ctx = state.context;
-  const now = ctx.currentTime;
-
-  // First note: C5 (523Hz) — soft sine
-  const osc1 = ctx.createOscillator();
-  const gain1 = ctx.createGain();
-  osc1.type = 'sine';
-  osc1.frequency.value = 523;
-  gain1.gain.setValueAtTime(volume, now);
-  gain1.gain.setTargetAtTime(0, now + 0.8, 0.3); // Long gentle fade
-  osc1.connect(gain1);
-  gain1.connect(state.masterGain);
-  osc1.start(now);
-  osc1.stop(now + 1.5);
-
-  // Second note: E5 (659Hz) — slightly delayed, quieter
-  const osc2 = ctx.createOscillator();
-  const gain2 = ctx.createGain();
-  osc2.type = 'sine';
-  osc2.frequency.value = 659;
-  gain2.gain.setValueAtTime(0, now);
-  gain2.gain.setValueAtTime(volume * 0.6, now + 0.15); // Starts after first note
-  gain2.gain.setTargetAtTime(0, now + 0.9, 0.3);
-  osc2.connect(gain2);
-  gain2.connect(state.masterGain);
-  osc2.start(now);
-  osc2.stop(now + 1.5);
-}
-
-/**
- * Play break complete marimba. PRD Section 5.2.6: G4, 400ms.
- */
-export function playBreakComplete(theme: SoundTheme): void {
-  if (theme === 'silent') return;
-  playTone(392, 400, { volume: 0.5, type: 'triangle' });
-}
-
-/**
- * Play pause sound. Gentle descending tone.
- */
-export function playPauseSound(theme: SoundTheme): void {
-  if (theme === 'silent') return;
-  playNoteSequence([
-    { frequency: 294, durationMs: 120 },
-    { frequency: 220, durationMs: 120 },
-  ], { volume: 0.15, type: 'sine' });
-}
-
-/**
- * Play resume sound. Gentle ascending tone.
- */
-export function playResumeSound(theme: SoundTheme): void {
-  if (theme === 'silent') return;
-  playNoteSequence([
-    { frequency: 220, durationMs: 120 },
-    { frequency: 294, durationMs: 120 },
-  ], { volume: 0.15, type: 'sine' });
-}
-
-/**
- * Play tick sound — soft water drop on a cushioned surface.
- *
- * Designed for maximum focus and calm using sound research:
- *
- * Technique: filtered noise burst + low sine body
- * - A real water drop is NOT a pure tone — it's a brief broadband
- *   impulse (the "blep") followed by a low resonant body.
- * - We simulate this with a very short noise burst (3ms) through a
- *   bandpass filter at 280Hz, layered with a 150Hz sine "body."
- * - 150Hz is in the chest-resonance range — felt more than heard,
- *   creating a warm, grounding sensation.
- * - Total volume is 1% of master — subliminal. The brain perceives
- *   the rhythm pattern without consciously tracking each drop.
- * - Matches the acoustic profile of rain on a leaf or a zen fountain.
- */
-export function playTick(volume = 0.01): void {
-  if (!state.context || !state.masterGain) return;
-
-  const ctx = state.context;
-  const now = ctx.currentTime;
-
-  // Layer 1: The "blep" — very short filtered noise impulse
-  const bufferSize = Math.floor(ctx.sampleRate * 0.004); // 4ms of noise
-  const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-  const noiseData = noiseBuffer.getChannelData(0);
-  for (let i = 0; i < bufferSize; i++) {
-    noiseData[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize); // Decaying noise
-  }
-  const noiseSource = ctx.createBufferSource();
-  noiseSource.buffer = noiseBuffer;
-
-  // Bandpass filter — only let through the soft "blep" frequencies
-  const filter = ctx.createBiquadFilter();
-  filter.type = 'bandpass';
-  filter.frequency.value = 280;
-  filter.Q.value = 2;
-
-  const noiseGain = ctx.createGain();
-  noiseGain.gain.value = volume * 3;
-
-  noiseSource.connect(filter);
-  filter.connect(noiseGain);
-  noiseGain.connect(state.masterGain);
-  noiseSource.start(now);
-
-  // Layer 2: The "body" — ultra-low sine, felt more than heard
-  const body = ctx.createOscillator();
-  const bodyGain = ctx.createGain();
-  body.type = 'sine';
-  body.frequency.value = 150;
-
-  bodyGain.gain.setValueAtTime(0, now);
-  bodyGain.gain.linearRampToValueAtTime(volume * 0.8, now + 0.005);
-  bodyGain.gain.setTargetAtTime(0, now + 0.02, 0.06);
-
-  body.connect(bodyGain);
-  bodyGain.connect(state.masterGain);
-  body.start(now);
-  body.stop(now + 0.25);
-}
-
-/**
- * Play last-30s tick — same soft drop, slightly more audible.
- */
-export function playLast30sTick(): void {
-  playTick(0.02);
-}
-
-/**
- * Start ambient sound. PRD Section 5.7.
- * Fades in over 3 seconds. Focus-only (stops during breaks).
- */
-export function startAmbientSound(type: string, volume: number): void {
-  if (!state.context || !state.masterGain || type === 'none') return;
-
-  stopAmbientSound();
-
-  // Generate ambient noise using oscillators
-  state.ambientGain = state.context.createGain();
-  state.ambientGain.gain.value = 0;
-  state.ambientGain.connect(state.masterGain);
-
-  // Create noise-like sound using detuned oscillators
-  const oscCount = type === 'white_noise' || type === 'brown_noise' ? 8 : 4;
-  for (let i = 0; i < oscCount; i++) {
-    const osc = state.context.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.value = 100 + Math.random() * 400;
-    const oscGain = state.context.createGain();
-    oscGain.gain.value = 0.1;
-    osc.connect(oscGain);
-    oscGain.connect(state.ambientGain);
-    osc.start();
-  }
-
-  // Fade in over 3 seconds (PRD 5.7)
-  const targetVolume = volume / 100;
-  state.ambientGain.gain.setTargetAtTime(targetVolume, state.context.currentTime, 1.0);
-}
-
-/**
- * Stop ambient sound. PRD: 3-second fade out.
- */
-export function stopAmbientSound(): void {
-  if (state.ambientGain && state.context) {
-    state.ambientGain.gain.setTargetAtTime(0, state.context.currentTime, 1.0);
-    setTimeout(() => {
-      state.ambientSource?.stop();
-      state.ambientSource = null;
-    }, 3000);
-  }
-}
-
-/**
- * Trigger haptic feedback (mobile only). PRD Section 5.7.
- */
-export function triggerHaptic(durationMs: number): void {
-  if ('vibrate' in navigator) {
-    navigator.vibrate(durationMs);
-  }
-}
-
-/**
- * Clean up audio context.
- */
 export function destroyAudioEngine(): void {
   stopAmbientSound();
   state.context?.close();
   state.context = null;
   state.masterGain = null;
   state.initialized = false;
+}
+
+// ─── Master Controls ─────────────────────────────────────────
+
+/** Mute: sets master gain to 0. All sounds silenced instantly. */
+export function setMuted(muted: boolean): void {
+  state.muted = muted;
+  if (state.masterGain && state.context) {
+    state.masterGain.gain.setTargetAtTime(
+      muted ? 0 : state.volume,
+      state.context.currentTime,
+      0.02, // 20ms smooth transition (no pop)
+    );
+  }
+}
+
+export function isMuted(): boolean {
+  return state.muted;
+}
+
+export function setMasterVolume(volume: number): void {
+  state.volume = volume / 100;
+  if (state.masterGain && state.context && !state.muted) {
+    state.masterGain.gain.setTargetAtTime(state.volume, state.context.currentTime, 0.05);
+  }
+}
+
+// ─── Handpan Tick ────────────────────────────────────────────
+
+/**
+ * Play a single handpan-style tick — the core focus sound.
+ *
+ * Design: a meditative handpan strike tuned to D4 (293.66 Hz).
+ * - Warm sine/triangle blend with natural exponential decay
+ * - Slight detuned overtone at ~440Hz (perfect 5th) for richness
+ * - Quick soft attack (5ms), long tail (~400ms)
+ * - Feels like a single tongue drum or handpan note
+ * - Volume is sub-ambient: you could listen 90 minutes without fatigue
+ */
+export function playTick(volume = 0.018): void {
+  if (!state.context || !state.masterGain) return;
+
+  const ctx = state.context;
+  const now = ctx.currentTime;
+
+  // Fundamental: D4 (293.66 Hz) — warm, grounding
+  const fundamental = ctx.createOscillator();
+  const fundGain = ctx.createGain();
+  fundamental.type = 'triangle'; // Warmer than sine, fewer harmonics than square
+  fundamental.frequency.value = 293.66;
+  fundGain.gain.setValueAtTime(0, now);
+  fundGain.gain.linearRampToValueAtTime(volume, now + 0.005); // 5ms attack
+  fundGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45); // Natural decay
+
+  fundamental.connect(fundGain);
+  fundGain.connect(state.masterGain);
+  fundamental.start(now);
+  fundamental.stop(now + 0.5);
+
+  // Overtone: A4 (440 Hz) — perfect 5th above, adds shimmer
+  const overtone = ctx.createOscillator();
+  const overGain = ctx.createGain();
+  overtone.type = 'sine';
+  overtone.frequency.value = 440;
+  overGain.gain.setValueAtTime(0, now);
+  overGain.gain.linearRampToValueAtTime(volume * 0.25, now + 0.003); // Faster, quieter
+  overGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3); // Shorter tail
+
+  overtone.connect(overGain);
+  overGain.connect(state.masterGain);
+  overtone.start(now);
+  overtone.stop(now + 0.35);
+}
+
+/**
+ * Last 30s tick — same handpan, slightly more present.
+ */
+export function playLast30sTick(): void {
+  playTick(0.03);
+}
+
+// ─── Event Sounds ────────────────────────────────────────────
+
+/**
+ * Activation chime — gentle single handpan note, higher register.
+ * A4 (440Hz), slightly louder than tick. Signals "session begins."
+ */
+export function playActivationChime(theme: SoundTheme): void {
+  if (theme === 'silent' || !state.context || !state.masterGain) return;
+
+  const ctx = state.context;
+  const now = ctx.currentTime;
+
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.value = 440;
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.08, now + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+
+  osc.connect(gain);
+  gain.connect(state.masterGain);
+  osc.start(now);
+  osc.stop(now + 0.7);
+}
+
+/**
+ * Completion bell — two-note handpan chord. Warm, satisfying.
+ * D4 + A4, staggered onset, long decay.
+ */
+export function playCompletionBell(theme: SoundTheme, volume = 0.12): void {
+  if (theme === 'silent' || !state.context || !state.masterGain) return;
+
+  const ctx = state.context;
+  const now = ctx.currentTime;
+
+  // D4
+  const osc1 = ctx.createOscillator();
+  const gain1 = ctx.createGain();
+  osc1.type = 'triangle';
+  osc1.frequency.value = 293.66;
+  gain1.gain.setValueAtTime(0, now);
+  gain1.gain.linearRampToValueAtTime(volume, now + 0.01);
+  gain1.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+  osc1.connect(gain1);
+  gain1.connect(state.masterGain);
+  osc1.start(now);
+  osc1.stop(now + 1.3);
+
+  // A4 — enters slightly after, quieter
+  const osc2 = ctx.createOscillator();
+  const gain2 = ctx.createGain();
+  osc2.type = 'sine';
+  osc2.frequency.value = 440;
+  gain2.gain.setValueAtTime(0, now + 0.1);
+  gain2.gain.linearRampToValueAtTime(volume * 0.5, now + 0.12);
+  gain2.gain.exponentialRampToValueAtTime(0.0001, now + 1.0);
+  osc2.connect(gain2);
+  gain2.connect(state.masterGain);
+  osc2.start(now);
+  osc2.stop(now + 1.1);
+}
+
+/** Break complete — single soft G4 marimba-style note. */
+export function playBreakComplete(theme: SoundTheme): void {
+  if (theme === 'silent' || !state.context || !state.masterGain) return;
+
+  const ctx = state.context;
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.value = 392; // G4
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.08, now + 0.008);
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+  osc.connect(gain);
+  gain.connect(state.masterGain);
+  osc.start(now);
+  osc.stop(now + 0.55);
+}
+
+/** Pause — gentle descending two-note. */
+export function playPauseSound(theme: SoundTheme): void {
+  if (theme === 'silent' || !state.context || !state.masterGain) return;
+  playNoteSequence([293.66, 220], 0.06, 120);
+}
+
+/** Resume — gentle ascending two-note. */
+export function playResumeSound(theme: SoundTheme): void {
+  if (theme === 'silent' || !state.context || !state.masterGain) return;
+  playNoteSequence([220, 293.66], 0.06, 120);
+}
+
+/** Internal: play a sequence of frequencies as triangle waves. */
+function playNoteSequence(frequencies: number[], volume: number, durationMs: number): void {
+  if (!state.context || !state.masterGain) return;
+
+  const ctx = state.context;
+  let startTime = ctx.currentTime;
+
+  for (const freq of frequencies) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(volume, startTime + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + durationMs / 1000);
+    osc.connect(gain);
+    gain.connect(state.masterGain!);
+    osc.start(startTime);
+    osc.stop(startTime + durationMs / 1000 + 0.05);
+    startTime += durationMs / 1000;
+  }
+}
+
+// ─── Ambient Sound ───────────────────────────────────────────
+
+export function startAmbientSound(type: string, volume: number): void {
+  if (!state.context || !state.masterGain || type === 'none') return;
+  stopAmbientSound();
+
+  state.ambientGain = state.context.createGain();
+  state.ambientGain.gain.value = 0;
+  state.ambientGain.connect(state.masterGain);
+
+  // Generate ambient noise via detuned oscillators
+  for (let i = 0; i < 6; i++) {
+    const osc = state.context.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = 80 + Math.random() * 300;
+    const oscGain = state.context.createGain();
+    oscGain.gain.value = 0.08;
+    osc.connect(oscGain);
+    oscGain.connect(state.ambientGain!);
+    osc.start();
+  }
+
+  // 3-second fade in
+  const targetVolume = volume / 100;
+  state.ambientGain.gain.setTargetAtTime(targetVolume, state.context.currentTime, 1.0);
+}
+
+export function stopAmbientSound(): void {
+  if (state.ambientGain && state.context) {
+    state.ambientGain.gain.setTargetAtTime(0, state.context.currentTime, 0.5);
+  }
+}
+
+// ─── Haptic ──────────────────────────────────────────────────
+
+export function triggerHaptic(durationMs: number): void {
+  if ('vibrate' in navigator) {
+    navigator.vibrate(durationMs);
+  }
 }

@@ -29,7 +29,12 @@ export default function TimerPage() {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [intent, setIntent] = useState('');
   const [category, setCategory] = useState('General');
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('bm_muted') === 'true';
+    }
+    return false;
+  });
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -79,8 +84,8 @@ export default function TimerPage() {
     return () => clearInterval(interval);
   }, [fetchTodaySessions]);
 
-  // Audio
-  const audio = useAudio(settings);
+  // Audio — mute state controls master gain in the engine. No per-call-site checks.
+  const audio = useAudio(settings, isMuted);
   const lastTickedSecondRef = useRef(-1);
   const lastTickTimeRef = useRef(0);
 
@@ -97,21 +102,17 @@ export default function TimerPage() {
   } = useTimer({
     showSeconds: settings?.showSeconds ?? true,
     onComplete: () => {
-      if (!isMuted) {
-        const mode = state?.mode;
-        if (mode === 'focus') {
-          audio.playCompletion(false);
-          audio.playCompletionHaptic();
-        } else {
-          audio.playBreakEnd();
-        }
+      const mode = state?.mode;
+      if (mode === 'focus') {
+        audio.playCompletion(false);
+        audio.playCompletionHaptic();
+      } else {
+        audio.playBreakEnd();
       }
       audio.stopAmbient();
       fetchTodaySessions();
     },
     onTick: (remaining) => {
-      if (isMuted) return;
-
       // Only tick once per integer second
       const currentSecond = Math.floor(remaining);
       if (currentSecond === lastTickedSecondRef.current) return;
@@ -208,10 +209,9 @@ export default function TimerPage() {
     await audio.ensureInitialized();
 
     // If tick is enabled, don't play activation chime — the tick IS the rhythm.
-    // Playing both creates a jarring double-sound on start.
     const tickIsOn = (state?.mode === 'focus' && settings?.tickDuringFocus) ||
       (state?.mode !== 'focus' && settings?.tickDuringBreaks);
-    if (!tickIsOn && !isMuted) {
+    if (!tickIsOn) {
       audio.playActivation();
     }
 
@@ -220,7 +220,7 @@ export default function TimerPage() {
     }
     wakeLock.acquire();
     await actions.start(state?.mode ?? 'focus', intent || null, category);
-  }, [audio, wakeLock, actions, state?.mode, intent, category, settings?.ambientSound, settings?.tickDuringFocus, settings?.tickDuringBreaks, isMuted]);
+  }, [audio, wakeLock, actions, state?.mode, intent, category, settings?.ambientSound, settings?.tickDuringFocus, settings?.tickDuringBreaks]);
 
   const handlePause = useCallback(async () => {
     audio.playPause();
@@ -409,24 +409,45 @@ export default function TimerPage() {
         onTakeOver={() => actions.takeOver()}
       />
 
-      {/* Mute toggle — instant access without going to Settings */}
+      {/* Mute toggle — prominent, persistent, one source of truth */}
       <button
         onClick={() => {
-          setIsMuted(!isMuted);
-          if (!isMuted) {
+          const next = !isMuted;
+          setIsMuted(next);
+          localStorage.setItem('bm_muted', String(next));
+          if (next) {
             audio.stopAmbient();
           } else if (settings?.ambientSound && settings.ambientSound !== 'none' && state?.status === 'running' && state?.mode === 'focus') {
             audio.startAmbient();
           }
         }}
-        className={`px-3 py-1.5 rounded-full text-xs font-mono uppercase tracking-wider transition-colors ${
-          isMuted
-            ? 'bg-red-900/20 text-red-400 border border-red-800/30'
-            : 'bg-surface-900/50 text-surface-500 border border-surface-700'
-        }`}
+        className={`
+          relative flex items-center gap-2 px-4 py-2 rounded-full text-sm font-mono
+          transition-all duration-200
+          ${isMuted
+            ? 'bg-red-950/40 text-red-400 border border-red-800/40'
+            : 'bg-surface-900/60 text-surface-300 border border-surface-700 hover:text-white hover:border-surface-500'
+          }
+        `}
         title={isMuted ? 'Unmute all sounds' : 'Mute all sounds'}
+        aria-label={isMuted ? 'Unmute' : 'Mute'}
       >
-        {isMuted ? '🔇 Muted' : '🔊 Sound'}
+        {isMuted ? (
+          /* Speaker with slash — muted */
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" opacity="0.3" />
+            <line x1="23" y1="9" x2="17" y2="15" />
+            <line x1="17" y1="9" x2="23" y2="15" />
+          </svg>
+        ) : (
+          /* Speaker with waves — unmuted */
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" opacity="0.3" />
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+          </svg>
+        )}
+        <span className="tracking-wider">{isMuted ? 'Muted' : 'Sound'}</span>
       </button>
 
       {/* Daily Goal (PRD 5.4) */}
