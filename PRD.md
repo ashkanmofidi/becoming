@@ -186,10 +186,10 @@ Simultaneous Play: first request processed, sets controller. Second rejected wit
 EDGE CASE: Multiple tabs same browser: BroadcastChannel API negotiates controller. Second tab sees "This session is controlled in another tab" + "Take over."
 5.2.8 Browser Background Behavior
 5.2.8.1 Dynamic Tab Title [CHANGED v3.1.1 - 2026-04-09]
-Running: "▶ 24:59 — Deep Work | Becoming.." (with intent if set, updates every second)
-Paused: "⏸ 12:30 — Paused | Becoming.."
-Overtime: "▶ +01:30 — Overtime | Becoming.."
-Completed: "✓ Done! | Becoming.."
+Running: "24:59 — Deep Work | Becoming.." (with intent if set, updates every second) [CHANGED v3.1.8 - 2026-04-09: removed emoji prefix — favicon handles state visually]
+Paused: "12:30 — Paused | Becoming.."
+Overtime: "+01:30 — Overtime | Becoming.."
+Completed: "Done! | Becoming.."
 Idle: "Becoming.. | Focus Timer"
 Controlled by "Tab Title Timer" toggle in Display settings. Update synced to countdown tick.
 5.2.8.2 Dynamic Animated Favicon [CHANGED v3.1.1 - 2026-04-09]

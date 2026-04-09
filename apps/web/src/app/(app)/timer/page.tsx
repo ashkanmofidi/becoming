@@ -305,18 +305,20 @@ export default function TimerPage() {
     const intent = state?.intent;
     const intentLabel = intent ? ` — ${intent}` : '';
 
+    // No emoji prefix — the animated favicon already communicates state visually.
+    // Clean text only in the tab title.
     switch (timerStatus) {
       case 'running':
-        document.title = `▶ ${displayTime}${intentLabel} | Becoming..`;
+        document.title = `${displayTime}${intentLabel} | Becoming..`;
         break;
       case 'paused':
-        document.title = `⏸ ${displayTime} — Paused | Becoming..`;
+        document.title = `${displayTime} — Paused | Becoming..`;
         break;
       case 'overtime':
-        document.title = `▶ ${displayTime} — Overtime | Becoming..`;
+        document.title = `${displayTime} — Overtime | Becoming..`;
         break;
       case 'completed':
-        document.title = '✓ Done! | Becoming..';
+        document.title = 'Done! | Becoming..';
         break;
       default:
         document.title = 'Becoming.. | Focus Timer';

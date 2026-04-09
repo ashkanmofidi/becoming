@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.1.8 (2026-04-09) - Clean Tab Title
+
+### Fixed
+- Removed redundant emoji characters (▶ ⏸ ✓) from browser tab title. The animated favicon already communicates timer state visually — doubling it with emoji was cluttered.
+- Tab title now shows clean text: "24:59 — Deep Work | Becoming.." (running), "12:30 — Paused | Becoming.." (paused), "Done! | Becoming.." (completed).
+- Dynamic animated favicon completely unchanged — still renders state-reactive canvas icon.
+
 ## v3.1.7 (2026-04-09) - Universal Tick Resume
 
 ### Fixed
