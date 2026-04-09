@@ -1,12 +1,11 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { authService } from '@/services/auth.service';
-import { Sidebar } from '@/components/layout/Sidebar';
+import { SidebarWrapper } from '@/components/layout/SidebarWrapper';
 import { HeaderButtons } from '@/components/header/HeaderButtons';
 
 /**
  * Authenticated app layout. PRD Section 4.
- * Sidebar + header shell for all authenticated pages.
+ * Cookie check server-side. User data fetched client-side in Sidebar.
  */
 export default async function AppLayout({
   children,
@@ -20,19 +19,9 @@ export default async function AppLayout({
     redirect('/login');
   }
 
-  // Fetch session for user info and role (PRD Section 3)
-  const session = await authService.validateSession(sessionToken);
-  if (!session) {
-    redirect('/login');
-  }
-
   return (
     <div className="flex min-h-screen">
-      <Sidebar
-        userName={session.name}
-        userEmail={session.email}
-        userRole={session.role}
-      />
+      <SidebarWrapper />
 
       <main className="flex-1 min-h-screen">
         <div className="flex items-center justify-end px-4 py-2 border-b border-surface-900/50">
