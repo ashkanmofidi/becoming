@@ -9,7 +9,7 @@
 - Slow page transitions: sidebar now uses Next.js Link for instant client-side navigation (was using <a> tags causing full page reloads).
 - Missing sidebar elements: Super Admin/Admin role badge, Logout button, Admin nav section (Analytics, Users, Feedback, Audit Log) now visible for admin/super_admin users.
 - Stale timer state showing "Timer running on another device" when no other device is active. Timer now auto-resets abandoned running states and correctly identifies controller on idle/completed timers.
-- Tick sound redesigned: previous version was harsh and chaotic (1800Hz fast pitch drop). Now a soft water drop — 600→200Hz sine with slow pitch fall, 4% volume, long gentle fade. Like a raindrop on a still pond.
+- Tick sound redesigned using sound psychology: 396Hz Solfeggio frequency (grounding), pure sine, 1.5% volume (sub-threshold — brain registers rhythm without conscious attention), 300ms natural water drop decay, pitch bends 396→220Hz organically. 1-second interval matches resting heart rate for focus entrainment.
 
 ### Changed
 - PRD.md: Added Sections 5.7.1-5.7.4 (sound behavior rules), updated Section 2 (instant navigation), Section 3 (sidebar profile card)

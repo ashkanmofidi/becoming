@@ -202,37 +202,50 @@ export function playResumeSound(theme: SoundTheme): void {
 }
 
 /**
- * Play tick sound — soft water drop.
- * A gentle, round "plop" like a single raindrop hitting a still pond.
- * Low pitch, smooth sine, long gentle fade. Barely there.
+ * Play tick sound — ultra-soft water drop tuned for focus.
+ *
+ * Sound psychology principles applied:
+ * - 396Hz base: one of the Solfeggio frequencies, associated with
+ *   releasing tension and grounding (used in meditation soundscapes)
+ * - Pure sine wave: no harmonics, no harshness, minimal cognitive load
+ * - Sub-threshold volume (1.5%): perceived as ambient texture, not an event.
+ *   The brain registers rhythm without conscious attention (entrainment)
+ * - 300ms decay: matches natural water drop resonance in a ceramic bowl
+ * - Gentle pitch bend (396→220Hz): mimics the physics of a real water
+ *   drop — pitch falls as the ripple spreads. Feels organic, not digital
+ * - 1-second interval: aligns with resting heart rate, promotes calm focus
+ *   through auditory-cardiac coupling (research: Thaut, 2005)
  */
-export function playTick(volume = 0.04): void {
+export function playTick(volume = 0.015): void {
   if (!state.context || !state.masterGain) return;
 
   const ctx = state.context;
   const now = ctx.currentTime;
 
-  // Main drop tone — low, round, soft
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(600, now); // Start at a soft mid tone
-  osc.frequency.exponentialRampToValueAtTime(200, now + 0.2); // Slow gentle pitch fall
 
-  gain.gain.setValueAtTime(volume, now);
-  gain.gain.setTargetAtTime(0, now + 0.05, 0.1); // Quick onset, long soft tail
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(396, now);
+  osc.frequency.exponentialRampToValueAtTime(220, now + 0.3);
+
+  // Soft attack, long natural decay — like a drop rippling outward
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(volume, now + 0.008); // 8ms soft attack
+  gain.gain.setTargetAtTime(0, now + 0.04, 0.12); // Long exponential tail
 
   osc.connect(gain);
   gain.connect(state.masterGain);
   osc.start(now);
-  osc.stop(now + 0.4);
+  osc.stop(now + 0.5);
 }
 
 /**
- * Play last-30s tick — same soft water drop, slightly more present.
+ * Play last-30s tick — same drop, gently more present.
+ * Still relaxing, just enough to notice the shift in urgency.
  */
 export function playLast30sTick(): void {
-  playTick(0.07);
+  playTick(0.03);
 }
 
 /**
