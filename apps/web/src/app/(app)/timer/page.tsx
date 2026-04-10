@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { TimerMode, UserSettings, Category } from '@becoming/shared';
 import { CATEGORY_DEFAULTS } from '@becoming/shared';
-import { getCycleStatus, getDailyGoalStatus } from '@becoming/shared';
+import { getCycleStatus } from '@becoming/shared';
 import { useTimer } from '@/hooks/useTimer';
 import { useAudio } from '@/hooks/useAudio';
 import { useWakeLock } from '@/hooks/useWakeLock';
