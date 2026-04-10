@@ -287,6 +287,15 @@ function SidebarStats() {
           <p className="text-surface-500 text-[9px] uppercase tracking-wider">Streak</p>
         </div>
       </div>
+      {/* Legal links — accessible at all times per GDPR/CCPA */}
+      <div className="flex items-center gap-3 mt-2">
+        <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-[9px] text-surface-500 hover:text-surface-300 transition-colors">
+          Terms
+        </a>
+        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-[9px] text-surface-500 hover:text-surface-300 transition-colors">
+          Privacy
+        </a>
+      </div>
     </div>
   );
 }

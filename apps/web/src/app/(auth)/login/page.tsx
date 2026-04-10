@@ -89,10 +89,24 @@ export default function LoginPage() {
         </button>
 
         <p className="text-surface-500 text-xs text-center mt-6">
-          Limited to 10 beta users. By signing in you agree to our{' '}
-          <button className="text-amber hover:text-amber-light underline">
-            terms of use
-          </button>.
+          Limited to 10 beta users. By signing in, you agree to our{' '}
+          <a
+            href="/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-amber hover:text-amber-light underline"
+          >
+            Terms of Use
+          </a>{' '}
+          and{' '}
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-amber hover:text-amber-light underline"
+          >
+            Privacy Policy
+          </a>.
         </p>
       </div>
     </main>
