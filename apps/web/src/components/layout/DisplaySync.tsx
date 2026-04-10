@@ -24,31 +24,12 @@ export function DisplaySync() {
   useEffect(() => {
     if (!settings) return;
 
+    // Theme is applied purely via CSS class — globals.css has complete
+    // light theme overrides for every Tailwind class used in the app.
     const applyTheme = (theme: 'dark' | 'light') => {
       const root = document.documentElement;
-      if (theme === 'light') {
-        root.classList.remove('dark');
-        root.classList.add('light');
-        root.style.setProperty('--bg-primary', '#F5F5F4');
-        root.style.setProperty('--bg-card', '#FFFFFF');
-        root.style.setProperty('--bg-surface-900', '#E7E5E4');
-        root.style.setProperty('--bg-surface-700', '#D6D3D1');
-        root.style.setProperty('--text-primary', '#1C1917');
-        root.style.setProperty('--text-secondary', '#57534E');
-        root.style.setProperty('--text-muted', '#A8A29E');
-        root.style.setProperty('--border-color', '#E7E5E4');
-      } else {
-        root.classList.remove('light');
-        root.classList.add('dark');
-        root.style.setProperty('--bg-primary', '#0A0A0A');
-        root.style.setProperty('--bg-card', '#111111');
-        root.style.setProperty('--bg-surface-900', '#1A1A1A');
-        root.style.setProperty('--bg-surface-700', '#3A3A3A');
-        root.style.setProperty('--text-primary', '#EDECE8');
-        root.style.setProperty('--text-secondary', '#9CA3AF');
-        root.style.setProperty('--text-muted', '#6B7280');
-        root.style.setProperty('--border-color', '#1A1A1A');
-      }
+      root.classList.remove('dark', 'light');
+      root.classList.add(theme);
     };
 
     if (settings.theme === 'system') {

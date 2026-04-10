@@ -3,87 +3,160 @@
 @tailwind utilities;
 
 :root {
-  /* Display settings — set dynamically by DisplaySync component */
   --font-scale: 1;
   --accent-color: #D97706;
   --break-accent-color: #0D9488;
-
-  /* Theme colors — overridden by DisplaySync for light/dark */
-  --bg-primary: #0A0A0A;
-  --bg-card: #111111;
-  --bg-surface-900: #1A1A1A;
-  --bg-surface-700: #3A3A3A;
-  --text-primary: #EDECE8;
-  --text-secondary: #9CA3AF;
-  --text-muted: #6B7280;
-  --border-color: #1A1A1A;
 }
 
 body {
   font-family: 'JetBrains Mono', monospace;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
   font-size: calc(1rem * var(--font-scale));
+  transition: background-color 200ms, color 200ms;
 }
 
-/* Reactive theme classes — body colors update from CSS vars */
-h1, h2, h3, h4, h5, h6 {
-  color: var(--text-primary);
+/* ─── DARK THEME (default) ──────────────────────────────── */
+.dark body,
+body:not(.light) {
+  background-color: #0A0A0A;
+  color: #EDECE8;
 }
 
-/* Timer flip-clock animation */
-.flip-digit {
-  transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1);
+/* ─── LIGHT THEME ───────────────────────────────────────── */
+
+/* Backgrounds */
+.light body { background-color: #FAFAFA; color: #111827; }
+.light .bg-bg-primary { background-color: #FAFAFA !important; }
+.light .bg-bg-card { background-color: #FFFFFF !important; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.light .bg-surface-900 { background-color: #F3F4F6 !important; }
+.light .bg-surface-700 { background-color: #E5E7EB !important; }
+.light .bg-surface-900\/50 { background-color: rgba(243,244,246,0.5) !important; }
+.light .bg-surface-900\/30 { background-color: rgba(243,244,246,0.3) !important; }
+.light .bg-surface-900\/60 { background-color: rgba(243,244,246,0.6) !important; }
+
+/* Text — WCAG AA contrast on white/light backgrounds */
+.light .text-white { color: #111827 !important; }
+.light .text-surface-100 { color: #111827 !important; }
+.light .text-surface-200 { color: #1F2937 !important; }
+.light .text-surface-300 { color: #374151 !important; }
+.light .text-surface-400 { color: #4B5563 !important; }
+.light .text-surface-500 { color: #6B7280 !important; }
+.light .text-surface-700 { color: #9CA3AF !important; }
+
+/* Borders */
+.light .border-surface-900 { border-color: #E5E7EB !important; }
+.light .border-surface-900\/50 { border-color: rgba(229,231,235,0.5) !important; }
+.light .border-surface-700 { border-color: #D1D5DB !important; }
+.light .border-surface-500 { border-color: #9CA3AF !important; }
+.light .border-surface-300 { border-color: #6B7280 !important; }
+
+/* Hover states */
+.light .hover\:bg-white\/5:hover { background-color: rgba(0,0,0,0.04) !important; }
+.light .hover\:bg-surface-900:hover { background-color: #F3F4F6 !important; }
+.light .hover\:bg-surface-900\/30:hover { background-color: rgba(243,244,246,0.3) !important; }
+.light .hover\:bg-surface-700:hover { background-color: #E5E7EB !important; }
+.light .hover\:text-white:hover { color: #111827 !important; }
+.light .hover\:text-surface-300:hover { color: #374151 !important; }
+.light .hover\:text-surface-200:hover { color: #1F2937 !important; }
+.light .hover\:border-surface-500:hover { border-color: #9CA3AF !important; }
+
+/* Forms */
+.light input,
+.light select,
+.light textarea {
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+  border-color: #D1D5DB !important;
+}
+.light input::placeholder,
+.light textarea::placeholder {
+  color: #9CA3AF !important;
+}
+.light input:focus,
+.light select:focus,
+.light textarea:focus {
+  border-color: var(--accent-color) !important;
 }
 
-/* Reduced motion — disable all animations globally */
+/* Sidebar */
+.light aside {
+  background-color: #F3F4F6 !important;
+  border-color: #E5E7EB !important;
+}
+
+/* Overlays and modals */
+.light .bg-black\/60 { background-color: rgba(0,0,0,0.4) !important; }
+.light .bg-black\/70 { background-color: rgba(0,0,0,0.5) !important; }
+
+/* Scrollbars */
+.light ::-webkit-scrollbar-track { background: #F3F4F6; }
+.light ::-webkit-scrollbar-thumb { background: #D1D5DB; }
+.light ::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+
+/* Header bar */
+.light .border-b.border-surface-900\/50 { border-color: #E5E7EB !important; }
+
+/* Toggle switches — ensure visible on light bg */
+.light .bg-surface-700 { background-color: #D1D5DB !important; }
+
+/* Amber accent elements — ensure contrast on light bg */
+.light .text-amber { color: #B45309 !important; } /* Darker amber for light bg */
+.light .bg-amber { background-color: #D97706 !important; }
+.light .bg-amber\/10 { background-color: rgba(217,119,6,0.1) !important; }
+.light .bg-amber\/20 { background-color: rgba(217,119,6,0.15) !important; }
+.light .border-amber { border-color: #D97706 !important; }
+.light .border-amber\/30 { border-color: rgba(217,119,6,0.3) !important; }
+.light .hover\:bg-amber\/10:hover { background-color: rgba(217,119,6,0.1) !important; }
+
+/* Teal accent */
+.light .text-teal { color: #0F766E !important; }
+
+/* Red elements (logout, errors) */
+.light .bg-red-950\/40 { background-color: rgba(254,226,226,0.6) !important; }
+.light .text-red-400 { color: #DC2626 !important; }
+.light .border-red-800\/40 { border-color: rgba(220,38,38,0.3) !important; }
+.light .border-red-900\/30 { border-color: rgba(220,38,38,0.2) !important; }
+.light .bg-red-900\/20 { background-color: rgba(254,226,226,0.5) !important; }
+.light .bg-red-900\/30 { background-color: rgba(254,226,226,0.6) !important; }
+
+/* Green elements */
+.light .text-green-400 { color: #16A34A !important; }
+.light .text-green-500 { color: #16A34A !important; }
+.light .bg-green-900\/80 { background-color: rgba(220,252,231,0.8) !important; color: #166534 !important; }
+
+/* Blue elements */
+.light .bg-blue-900\/30 { background-color: rgba(219,234,254,0.6) !important; }
+.light .text-blue-400 { color: #2563EB !important; }
+
+/* Orange elements */
+.light .bg-orange-900\/30 { background-color: rgba(255,237,213,0.6) !important; }
+.light .text-orange-400 { color: #EA580C !important; }
+
+/* Yellow elements */
+.light .text-yellow-400 { color: #CA8A04 !important; }
+
+/* Purple elements */
+.light .bg-purple-600 { background-color: #7C3AED !important; }
+.light .bg-purple-600\/20 { background-color: rgba(124,58,237,0.1) !important; }
+.light .text-purple-400 { color: #7C3AED !important; }
+
+/* ─── REDUCED MOTION ───────────────────────────────────── */
 .reduced-motion * {
   animation: none !important;
   transition: none !important;
 }
 
-/* Scrollbar styling — theme-aware */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg-surface-900);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--bg-surface-700);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+/* ─── TIMER ────────────────────────────────────────────── */
+.flip-digit {
+  transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Light theme overrides for Tailwind classes that use hardcoded dark colors */
-.light .bg-bg-primary { background-color: var(--bg-primary) !important; }
-.light .bg-bg-card { background-color: var(--bg-card) !important; }
-.light .bg-surface-900 { background-color: var(--bg-surface-900) !important; }
-.light .bg-surface-700 { background-color: var(--bg-surface-700) !important; }
-.light .text-surface-100 { color: var(--text-primary) !important; }
-.light .text-surface-300 { color: var(--text-secondary) !important; }
-.light .text-surface-500 { color: var(--text-muted) !important; }
-.light .text-white { color: var(--text-primary) !important; }
-.light .border-surface-900 { border-color: var(--border-color) !important; }
-.light .border-surface-700 { border-color: var(--bg-surface-700) !important; }
+/* ─── SCROLLBAR (dark default) ─────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #1A1A1A; }
+::-webkit-scrollbar-thumb { background: #3A3A3A; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #6B7280; }
 
-/* Light theme: specific component fixes */
-.light .bg-surface-900\/50 { background-color: rgba(231, 229, 228, 0.5) !important; }
-.light .bg-surface-900\/30 { background-color: rgba(231, 229, 228, 0.3) !important; }
-.light .bg-surface-900\/60 { background-color: rgba(231, 229, 228, 0.6) !important; }
-.light .hover\:bg-white\/5:hover { background-color: rgba(0, 0, 0, 0.05) !important; }
-.light .hover\:bg-surface-900:hover { background-color: var(--bg-surface-900) !important; }
-.light input, .light select, .light textarea {
-  background-color: var(--bg-card) !important;
-  color: var(--text-primary) !important;
-  border-color: var(--border-color) !important;
-}
-
-/* Accent color classes — use CSS variable instead of hardcoded amber */
+/* ─── UTILITY CLASSES ──────────────────────────────────── */
 .text-accent { color: var(--accent-color); }
 .bg-accent { background-color: var(--accent-color); }
 .border-accent { border-color: var(--accent-color); }
-.text-break-accent { color: var(--break-accent-color); }
-.bg-break-accent { background-color: var(--break-accent-color); }
