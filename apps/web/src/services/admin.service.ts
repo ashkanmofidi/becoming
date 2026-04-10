@@ -21,11 +21,51 @@ export const adminService = {
   async getPulseData(): Promise<PulseData> {
     const betaCount = await userRepo.getBetaUserCount();
 
+    // Compute real metrics from user data
+    let activeNow = 0;
+    let todaySessions = 0;
+    let todayFocusSeconds = 0;
+    const todayActiveUserSet = new Set<string>();
+    const today = new Date().toISOString().split('T')[0] ?? '';
+
+    try {
+      // Scan all user keys to aggregate stats
+      const userKeys = await kvClient.keys('user:*');
+      const userIds = userKeys
+        .map((k) => k.replace('user:', ''))
+        .filter((id) => !id.includes(':'));
+
+      for (const userId of userIds) {
+        // Check if timer is running
+        try {
+          const timer = await kvClient.get<Record<string, unknown>>(`timer:${userId}`);
+          if (timer && timer.status === 'running') activeNow++;
+        } catch { /* skip */ }
+
+        // Count today's sessions
+        try {
+          const sessions = await sessionRepo.findByUser(userId, { limit: 50 });
+          const todayUserSessions = sessions.filter(
+            (s) => s.date === today && s.status === 'completed' && !s.deletedAt,
+          );
+          if (todayUserSessions.length > 0) {
+            todayActiveUserSet.add(userId);
+            todaySessions += todayUserSessions.length;
+            todayFocusSeconds += todayUserSessions
+              .filter((s) => s.mode === 'focus')
+              .reduce((sum, s) => sum + s.actualDuration, 0);
+          }
+        } catch { /* skip */ }
+      }
+    } catch (err) {
+      logger.warn('Pulse data aggregation partial failure', { error: err });
+    }
+
     return {
-      activeNow: 0, // Would scan timer:* keys for running timers
-      todaySessions: 0, // Aggregated from all users
-      todayFocusHours: 0,
-      todayActiveUsers: 0,
+      activeNow,
+      todaySessions,
+      todayFocusHours: Math.round((todayFocusSeconds / 3600) * 10) / 10,
+      todayActiveUsers: todayActiveUserSet.size,
       betaCapacity: { current: betaCount, max: APP_DEFAULTS.BETA_CAP },
       systemStatus: 'green',
     };
@@ -114,14 +154,18 @@ export const adminService = {
       await userRepo.removeAdmin(target.email);
     }
 
-    await auditRepo.log({
-      actorId,
-      actorEmail,
-      action: 'role_changed',
-      targetId: targetUserId,
-      targetEmail: target.email,
-      details: { oldRole, newRole },
-    });
+    try {
+      await auditRepo.log({
+        actorId,
+        actorEmail,
+        action: 'role_changed',
+        targetId: targetUserId,
+        targetEmail: target.email,
+        details: { oldRole, newRole },
+      });
+    } catch (auditErr) {
+      logger.error('Audit log failed for role_changed (non-blocking)', { error: auditErr });
+    }
 
     logger.info('Role changed', { targetId: targetUserId, oldRole, newRole });
   },
@@ -144,14 +188,18 @@ export const adminService = {
   ): Promise<void> {
     await feedbackRepo.update(feedbackId, { status: status as FeedbackSubmission['status'] });
 
-    await auditRepo.log({
-      actorId,
-      actorEmail,
-      action: 'feedback_status_changed',
-      targetId: feedbackId,
-      targetEmail: null,
-      details: { newStatus: status },
-    });
+    try {
+      await auditRepo.log({
+        actorId,
+        actorEmail,
+        action: 'feedback_status_changed',
+        targetId: feedbackId,
+        targetEmail: null,
+        details: { newStatus: status },
+      });
+    } catch (auditErr) {
+      logger.error('Audit log failed for feedback_status_changed (non-blocking)', { error: auditErr });
+    }
   },
 
   /**

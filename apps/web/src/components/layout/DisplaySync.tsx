@@ -54,12 +54,13 @@ export function DisplaySync() {
   // Apply font scale
   useEffect(() => {
     if (!settings) return;
-    const scale = {
+    const scaleMap: Record<string, string> = {
       small: '0.85',
       normal: '1',
       large: '1.2',
       xl: '1.5',
-    }[settings.fontSize] ?? '1';
+    };
+    const scale = scaleMap[settings.fontSize] ?? '1';
     document.documentElement.style.setProperty('--font-scale', scale);
   }, [settings?.fontSize]);
 

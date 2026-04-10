@@ -10,11 +10,22 @@ const logger = createLogger('session-repo');
  */
 export const sessionRepo = {
   async create(session: SessionRecord): Promise<void> {
+    // Write session data first
     await kvClient.set(
       keys.session(session.userId, session.id),
       session as unknown as Record<string, unknown>,
     );
-    await kvClient.lpush(keys.sessionList(session.userId), session.id);
+    // Add to user's session list — if this fails, clean up the orphaned key
+    try {
+      await kvClient.lpush(keys.sessionList(session.userId), session.id);
+    } catch (err) {
+      logger.error('Failed to add session to list, cleaning up orphaned key', {
+        userId: session.userId, sessionId: session.id, error: err,
+      });
+      // Best-effort cleanup of the orphaned session key
+      try { await kvClient.del(keys.session(session.userId, session.id)); } catch { /* silent */ }
+      throw err; // Re-throw so caller knows creation failed
+    }
     logger.info('Session created', { userId: session.userId, sessionId: session.id, mode: session.mode });
   },
 

@@ -29,9 +29,11 @@ async function restore(filename: string) {
   console.log('Restore complete.');
 }
 
-const action = process.argv[2];
-if (action === 'restore') {
-  restore(process.argv[3] ?? '');
-} else {
-  backup();
-}
+void (function main() {
+  const action = process.argv[2];
+  if (action === 'restore') {
+    restore(process.argv[3] ?? '');
+  } else {
+    backup();
+  }
+})();

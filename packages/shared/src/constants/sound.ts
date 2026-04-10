@@ -1,16 +1,5 @@
 /** Sound configuration. PRD Section 5.7 */
 
-export const SOUND_FREQUENCIES = {
-  ACTIVATION_CHIME: { frequency: 528, duration: 200 },
-  PAUSE: { notes: ['D4', 'A3'], duration: 300 },
-  RESUME: { notes: ['A3', 'D4'], duration: 300 },
-  COMPLETION_BELL: { notes: ['C5', 'E5'], duration: 600, reverb: 400, volume: 0.6 },
-  COMPLETION_OVERTIME: { notes: ['C5', 'E5'], duration: 600, reverb: 400, volume: 0.4 },
-  BREAK_COMPLETE_MARIMBA: { note: 'G4', duration: 400 },
-  MINUTE_TICK: { duration: 50, volume: 0.2 },
-  LAST_30S_TICK: { frequency: 1000, duration: 50 },
-} as const;
-
 export const SOUND_THEMES = {
   warm: { label: 'Warm', description: 'Bells and marimba' },
   minimal: { label: 'Minimal', description: 'Sine waves' },

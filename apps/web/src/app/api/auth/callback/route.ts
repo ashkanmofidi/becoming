@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get('code');
   const error = searchParams.get('error');
+  const returnedState = searchParams.get('state');
 
   if (error) {
     logger.warn('OAuth error from Google', { error });
@@ -20,6 +21,13 @@ export async function GET(request: NextRequest) {
 
   if (!code) {
     return NextResponse.redirect(new URL('/login?error=missing_code', request.url));
+  }
+
+  // CSRF protection: verify state parameter matches cookie
+  const storedState = request.cookies.get('oauth_state')?.value;
+  if (!returnedState || !storedState || returnedState !== storedState) {
+    logger.warn('OAuth state mismatch — possible CSRF', { returnedState, hasStoredState: !!storedState });
+    return NextResponse.redirect(new URL('/login?error=state_mismatch', request.url));
   }
 
   try {
@@ -54,16 +62,18 @@ export async function GET(request: NextRequest) {
       maxAge: 3 * 24 * 60 * 60, // Hard 3-day expiry, matches server-side check
     });
 
+    // Clear the one-time OAuth state cookie
+    response.cookies.delete('oauth_state');
+
     return response;
   } catch (error) {
     if (error instanceof BetaCapReachedError) {
       return NextResponse.redirect(new URL('/login?error=beta_cap', request.url));
     }
 
+    // Log details server-side only — don't expose in URL (security)
     const errMsg = error instanceof Error ? error.message : String(error);
     logger.error('OAuth callback failed', { error: errMsg });
-    return NextResponse.redirect(
-      new URL(`/login?error=auth_failed&detail=${encodeURIComponent(errMsg)}`, request.url),
-    );
+    return NextResponse.redirect(new URL('/login?error=auth_failed', request.url));
   }
 }

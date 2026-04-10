@@ -147,25 +147,35 @@ export const sessionService = {
   /**
    * Bulk delete sessions.
    */
-  async bulkDelete(userId: string, sessionIds: string[]): Promise<number> {
-    let count = 0;
+  async bulkDelete(userId: string, sessionIds: string[]): Promise<{ succeeded: number; failed: string[] }> {
+    let succeeded = 0;
+    const failed: string[] = [];
     for (const id of sessionIds) {
-      await sessionRepo.softDelete(userId, id);
-      count++;
+      try {
+        await sessionRepo.softDelete(userId, id);
+        succeeded++;
+      } catch {
+        failed.push(id);
+      }
     }
-    return count;
+    return { succeeded, failed };
   },
 
   /**
    * Bulk change category.
    */
-  async bulkChangeCategory(userId: string, sessionIds: string[], newCategory: string): Promise<number> {
-    let count = 0;
+  async bulkChangeCategory(userId: string, sessionIds: string[], newCategory: string): Promise<{ succeeded: number; failed: string[] }> {
+    let succeeded = 0;
+    const failed: string[] = [];
     for (const id of sessionIds) {
-      await sessionRepo.update(userId, id, { category: newCategory });
-      count++;
+      try {
+        await sessionRepo.update(userId, id, { category: newCategory });
+        succeeded++;
+      } catch {
+        failed.push(id);
+      }
     }
-    return count;
+    return { succeeded, failed };
   },
 
   /**

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useSync } from '@/contexts/SyncProvider';
 import {
   initAudioEngine,
   resumeContext,
@@ -20,15 +21,14 @@ import { startTick, stopTick, setTickMuted, setTickVolume, isTickRunning } from 
  * Runs at the layout level. Reacts to settings changes AND timer state.
  * No other component should call startTick/stopTick/startAmbient/stopAmbient.
  *
- * Polls timer state every 2 seconds to know if a session is running.
+ * Subscribes to SyncProvider for timer state (no independent polling).
  * On every settings change OR timer state change, re-evaluates:
  * "Should tick be playing? Should ambient be playing?" and applies instantly.
  */
 export function useAudioSync() {
   const { settings } = useSettings();
+  const { timerState } = useSync();
   const initializedRef = useRef(false);
-  const timerStateRef = useRef<{ status: string; mode: string } | null>(null);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const ambientActiveRef = useRef(false);
 
   // Initialize engine on first settings load
@@ -43,15 +43,15 @@ export function useAudioSync() {
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
 
-  // The core sync function — evaluates all audio state and applies it
-  const syncAudio = useCallback(() => {
+  // The core sync function — evaluates all audio state and applies it.
+  // Reads settings from ref (always current) and timer state from params.
+  const syncAudio = useCallback((timerStatus?: string | null, timerMode?: string | null) => {
     const s = settingsRef.current;
     if (!s || !initializedRef.current) return;
 
-    const ts = timerStateRef.current;
-    const isRunning = ts?.status === 'running';
-    const isFocus = ts?.mode === 'focus';
-    const isBreak = ts?.mode === 'break' || ts?.mode === 'long_break';
+    const isRunning = timerStatus === 'running';
+    const isFocus = timerMode === 'focus';
+    const isBreak = timerMode === 'break' || timerMode === 'long_break';
 
     // Mute
     setEngineMuted(s.muted);
@@ -93,34 +93,16 @@ export function useAudioSync() {
       setAmbientVolume(s.ambientVolume);
       startAmbientSound(s.ambientSound, s.ambientVolume);
     }
-  }, []); // No deps — reads from refs
+  }, []); // No deps — reads settings from ref
 
-  // Poll timer state every 2 seconds
-  const fetchTimerState = useCallback(async () => {
-    try {
-      const res = await fetch('/api/timer');
-      if (res.ok) {
-        const data = await res.json();
-        const newState = data.state ? { status: data.state.status, mode: data.state.mode } : null;
-        const changed = JSON.stringify(newState) !== JSON.stringify(timerStateRef.current);
-        timerStateRef.current = newState;
-        if (changed) syncAudio();
-      }
-    } catch { /* silent */ }
-  }, [syncAudio]);
-
-  // Start polling on mount — stable interval since fetchTimerState is stable
+  // React to timer state changes from SyncProvider (no independent polling)
   useEffect(() => {
-    fetchTimerState();
-    pollRef.current = setInterval(fetchTimerState, 2000);
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [fetchTimerState]);
+    syncAudio(timerState?.status, timerState?.mode);
+  }, [timerState?.status, timerState?.mode, syncAudio]);
 
   // React to EVERY settings change instantly
   useEffect(() => {
-    syncAudio();
+    syncAudio(timerState?.status, timerState?.mode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     settings?.muted,

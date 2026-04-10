@@ -93,7 +93,7 @@ export function Sidebar({ userName, userEmail, userPicture, userRole, confirmLog
           Becoming<span className="text-amber">.</span><span className="text-amber">.</span>
         </h1>
         <p className="text-surface-500 text-[10px] tracking-[0.2em] uppercase font-mono mt-1">
-          V3.1 · ENTERPRISE BETA
+          V{process.env.NEXT_PUBLIC_APP_VERSION ?? '3.1'} · {process.env.NEXT_PUBLIC_APP_STAGE ?? 'ENTERPRISE BETA'}
         </p>
       </div>
 

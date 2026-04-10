@@ -285,8 +285,9 @@ describe('sessionService integration', () => {
     await seedSession(makeSession({ id: 'bd2' }));
     await seedSession(makeSession({ id: 'bd3' }));
 
-    const count = await sessionService.bulkDelete(USER_ID, ['bd1', 'bd2']);
-    expect(count).toBe(2);
+    const result = await sessionService.bulkDelete(USER_ID, ['bd1', 'bd2']);
+    expect(result.succeeded).toBe(2);
+    expect(result.failed).toHaveLength(0);
 
     const s1 = await mockKvClient.get<SessionRecord>(`session:${USER_ID}:bd1`);
     const s2 = await mockKvClient.get<SessionRecord>(`session:${USER_ID}:bd2`);
@@ -306,8 +307,9 @@ describe('sessionService integration', () => {
     await seedSession(makeSession({ id: 'bc2', category: 'General' }));
     await seedSession(makeSession({ id: 'bc3', category: 'Study' }));
 
-    const count = await sessionService.bulkChangeCategory(USER_ID, ['bc1', 'bc2'], 'Work');
-    expect(count).toBe(2);
+    const result = await sessionService.bulkChangeCategory(USER_ID, ['bc1', 'bc2'], 'Work');
+    expect(result.succeeded).toBe(2);
+    expect(result.failed).toHaveLength(0);
 
     const s1 = await mockKvClient.get<SessionRecord>(`session:${USER_ID}:bc1`);
     const s2 = await mockKvClient.get<SessionRecord>(`session:${USER_ID}:bc2`);

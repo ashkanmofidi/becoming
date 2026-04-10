@@ -117,9 +117,11 @@ async function rollback() {
 }
 
 // Run
-const action = process.argv[2];
-if (action === 'rollback') {
-  rollback();
-} else {
-  migrate();
-}
+void (function main() {
+  const action = process.argv[2];
+  if (action === 'rollback') {
+    rollback();
+  } else {
+    migrate();
+  }
+})();

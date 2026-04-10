@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { getPusherClient } from '@/lib/pusher-client';
+import { useSettings } from '@/contexts/SettingsContext';
+import { useData } from '@/contexts/DataProvider';
 
 type ConnectionStatus = 'connected' | 'syncing' | 'offline';
 
@@ -57,6 +59,8 @@ const POLL_INTERVAL = 2000; // Fallback polling interval
  * All three can run simultaneously. First update wins (dedup by lastUpdated).
  */
 export function SyncProvider({ children }: { children: React.ReactNode }) {
+  const { refreshFromServer: refreshSettings } = useSettings();
+  const { refreshSessions } = useData();
   const [timerState, setTimerState] = useState<TimerSyncState | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('syncing');
   const [metrics, setMetrics] = useState<SyncMetrics>({
@@ -114,12 +118,13 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         });
 
         channel.bind('session-logged', () => {
-          // Trigger a data refresh for session counters
-          // DataProvider handles this via its own refresh
+          // Another device completed a session — refresh counters
+          refreshSessions();
         });
 
         channel.bind('settings-changed', () => {
-          // SettingsProvider handles settings sync
+          // Another device changed settings — refresh
+          refreshSettings();
         });
 
         setConnectionStatus('connected');

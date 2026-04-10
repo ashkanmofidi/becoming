@@ -122,6 +122,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'each sessionId must be a non-empty string' }, { status: 400 });
   }
 
-  const count = await sessionService.bulkDelete(result.session.userId, sessionIds);
-  return NextResponse.json({ deleted: count });
+  const { succeeded, failed } = await sessionService.bulkDelete(result.session.userId, sessionIds);
+  return NextResponse.json({ deleted: succeeded, ...(failed.length > 0 ? { failed } : {}) });
 }

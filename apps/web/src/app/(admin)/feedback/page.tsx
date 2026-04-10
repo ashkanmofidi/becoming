@@ -236,12 +236,16 @@ ${f.severity ? `<span class="b">${f.severity}</span>` : ''}
         </button>
         {selectedCount > 0 && (
           <div className="relative group">
-            <button className="px-3 py-1.5 bg-amber text-white text-xs rounded-lg hover:bg-amber-light transition-colors">
+            <button
+              className="px-3 py-1.5 bg-amber text-white text-xs rounded-lg hover:bg-amber-light transition-colors"
+              aria-haspopup="true"
+              aria-label={`Export ${selectedCount} selected items`}
+            >
               Export ({selectedCount})
             </button>
-            <div className="absolute right-0 top-full mt-1 bg-bg-card border border-surface-700 rounded-lg shadow-lg z-10 hidden group-hover:block min-w-[100px]">
-              <button onClick={exportCsv} className="block w-full text-left px-4 py-2 text-xs text-surface-300 hover:bg-surface-900">CSV</button>
-              <button onClick={exportPdf} className="block w-full text-left px-4 py-2 text-xs text-surface-300 hover:bg-surface-900">PDF Report</button>
+            <div className="absolute right-0 top-full mt-1 bg-bg-card border border-surface-700 rounded-lg shadow-lg z-10 hidden group-hover:block min-w-[100px]" role="menu">
+              <button onClick={exportCsv} role="menuitem" className="block w-full text-left px-4 py-2 text-xs text-surface-300 hover:bg-surface-900">CSV</button>
+              <button onClick={exportPdf} role="menuitem" className="block w-full text-left px-4 py-2 text-xs text-surface-300 hover:bg-surface-900">PDF Report</button>
             </div>
           </div>
         )}

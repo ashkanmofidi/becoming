@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import type { UserSettings } from '@becoming/shared';
 import { LIMITS } from '@becoming/shared';
 import { SettingsCard } from '@/components/settings/primitives/SettingsCard';
@@ -10,6 +10,7 @@ import { Slider } from '@/components/settings/primitives/Slider';
 import { Select } from '@/components/settings/primitives/Select';
 import { ColorPicker } from '@/components/settings/primitives/ColorPicker';
 import { SegmentedControl } from '@/components/settings/primitives/SegmentedControl';
+import { ConfirmModal } from '@/components/timer/ConfirmModal';
 import { useSettings } from '@/contexts/SettingsContext';
 
 /**
@@ -19,9 +20,11 @@ import { useSettings } from '@/contexts/SettingsContext';
  */
 export default function SettingsPage() {
   const { settings, updateSettings } = useSettings();
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [clearInput, setClearInput] = useState('');
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const update = useCallback((key: keyof UserSettings, value: any) => {
+  const update = useCallback(<K extends keyof UserSettings>(key: K, value: UserSettings[K]) => {
     updateSettings({ [key]: value } as Partial<UserSettings>);
   }, [updateSettings]);
 
@@ -249,15 +252,7 @@ export default function SettingsPage() {
               </button>
 
               <button
-                onClick={() => {
-                  if (confirm('Reset all settings to defaults? Your sessions will be kept.')) {
-                    fetch('/api/settings', {
-                      method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ settings: null, reset: true }),
-                    }).then(() => window.location.reload());
-                  }
-                }}
+                onClick={() => setShowResetConfirm(true)}
                 className="px-4 py-3 bg-surface-900 border border-surface-700 rounded-lg text-sm text-surface-300 hover:text-white hover:border-surface-500 transition-colors text-left"
               >
                 <span className="font-medium block">Reset to Factory</span>
@@ -265,16 +260,7 @@ export default function SettingsPage() {
               </button>
 
               <button
-                onClick={() => {
-                  const typed = prompt('Type CLEAR to delete all sessions and reset settings:');
-                  if (typed === 'CLEAR') {
-                    fetch('/api/sessions', {
-                      method: 'DELETE',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ sessionIds: ['__all__'] }),
-                    }).then(() => window.location.reload());
-                  }
-                }}
+                onClick={() => { setClearInput(''); setShowClearConfirm(true); }}
                 className="px-4 py-3 bg-red-900/20 border border-red-800/30 rounded-lg text-sm text-red-300 hover:text-red-200 hover:border-red-700 transition-colors text-left"
               >
                 <span className="font-medium block">Clear All Data</span>
@@ -284,6 +270,67 @@ export default function SettingsPage() {
           </SettingsCard>
         </div>
       </div>
+
+      {/* Reset to Factory modal */}
+      <ConfirmModal
+        isOpen={showResetConfirm}
+        title="Reset to Factory Defaults"
+        message="This will reset all settings to their defaults. Your sessions will be kept."
+        confirmLabel="Reset"
+        onConfirm={() => {
+          setShowResetConfirm(false);
+          fetch('/api/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ settings: null, reset: true }),
+          }).then(() => window.location.reload());
+        }}
+        onCancel={() => setShowResetConfirm(false)}
+        variant="destructive"
+      />
+
+      {/* Clear All Data modal */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowClearConfirm(false)} />
+          <div className="relative bg-bg-card border border-surface-700 rounded-xl p-6 max-w-sm w-full shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="clear-dialog-title">
+            <h3 id="clear-dialog-title" className="text-white font-semibold mb-2">Clear All Data</h3>
+            <p className="text-surface-300 text-sm mb-4">
+              This will permanently delete all sessions and reset settings. Type <strong className="text-red-400">CLEAR</strong> to confirm.
+            </p>
+            <input
+              type="text"
+              value={clearInput}
+              onChange={(e) => setClearInput(e.target.value)}
+              placeholder="Type CLEAR"
+              className="w-full px-3 py-2 mb-4 bg-surface-900 border border-surface-700 rounded-lg text-sm text-white placeholder-surface-500 focus:border-red-500 focus:outline-none"
+              autoFocus
+            />
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="px-4 py-2 text-sm text-surface-300 border border-surface-700 rounded-lg hover:bg-surface-900 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={clearInput !== 'CLEAR'}
+                onClick={() => {
+                  setShowClearConfirm(false);
+                  fetch('/api/sessions', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sessionIds: ['__all__'] }),
+                  }).then(() => window.location.reload());
+                }}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Delete Everything
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

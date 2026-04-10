@@ -25,6 +25,10 @@ export default function LoginPage() {
     setError(null);
 
     try {
+      // Generate random state for CSRF protection — stored in cookie for server-side verification
+      const state = crypto.randomUUID();
+      document.cookie = `oauth_state=${state}; path=/; max-age=600; SameSite=Lax; Secure`;
+
       const params = new URLSearchParams({
         client_id: GOOGLE_CLIENT_ID,
         redirect_uri: `${window.location.origin}/api/auth/callback`,
@@ -32,6 +36,7 @@ export default function LoginPage() {
         scope: 'openid email profile',
         access_type: 'offline',
         prompt: 'consent',
+        state,
       });
 
       window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;

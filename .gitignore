@@ -10,3 +10,4 @@ dist
 v2-backup
 .secrets
 test-results
+backups/

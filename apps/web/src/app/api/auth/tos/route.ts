@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  if (!body.accepted) {
+  if (body.accepted !== true) {
     return NextResponse.json({ error: 'TOS must be accepted' }, { status: 400 });
   }
 

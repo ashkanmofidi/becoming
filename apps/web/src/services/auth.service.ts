@@ -146,14 +146,18 @@ export const authService = {
         await userRepo.addAdmin(googleUser.email);
       }
 
-      await auditRepo.log({
-        actorId: googleUser.sub,
-        actorEmail: googleUser.email,
-        action: 'user_registered',
-        targetId: null,
-        targetEmail: null,
-        details: { source: isAllowlisted ? 'invited' : 'direct' },
-      });
+      try {
+        await auditRepo.log({
+          actorId: googleUser.sub,
+          actorEmail: googleUser.email,
+          action: 'user_registered',
+          targetId: null,
+          targetEmail: null,
+          details: { source: isAllowlisted ? 'invited' : 'direct' },
+        });
+      } catch (auditErr) {
+        logger.error('Audit log failed for user_registered (non-blocking)', { error: auditErr });
+      }
 
       isNewUser = true;
       logger.info('New user registered', { userId: googleUser.sub, email: googleUser.email });
@@ -266,14 +270,18 @@ export const authService = {
     await userRepo.delete(userId);
     await userRepo.decrementBetaUserCount();
 
-    await auditRepo.log({
-      actorId: userId,
-      actorEmail: email,
-      action: 'user_deleted_self',
-      targetId: userId,
-      targetEmail: email,
-      details: {},
-    });
+    try {
+      await auditRepo.log({
+        actorId: userId,
+        actorEmail: email,
+        action: 'user_deleted_self',
+        targetId: userId,
+        targetEmail: email,
+        details: {},
+      });
+    } catch (auditErr) {
+      logger.error('Audit log failed for user_deleted_self (non-blocking)', { error: auditErr });
+    }
 
     logger.info('Account deleted', { userId, email });
   },

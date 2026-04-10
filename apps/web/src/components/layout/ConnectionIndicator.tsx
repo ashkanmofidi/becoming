@@ -9,17 +9,19 @@ import { useSync } from '@/contexts/SyncProvider';
 export function ConnectionIndicator() {
   const { connectionStatus, metrics } = useSync();
 
-  const color = {
+  const colorMap: Record<string, string> = {
     connected: 'bg-green-400',
     syncing: 'bg-yellow-400 animate-pulse',
     offline: 'bg-red-400',
-  }[connectionStatus];
+  };
+  const color = colorMap[connectionStatus] ?? 'bg-gray-400';
 
-  const label = {
+  const labelMap: Record<string, string> = {
     connected: 'Synced',
     syncing: 'Syncing...',
     offline: 'Offline',
-  }[connectionStatus];
+  };
+  const label = labelMap[connectionStatus] ?? 'Unknown';
 
   return (
     <div className="flex items-center gap-1.5" title={`${label} · ${metrics.avgLatencyMs}ms avg · ${metrics.pollsPerMinute} req/min`}>

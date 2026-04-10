@@ -369,7 +369,7 @@ export default function DashboardPage() {
             <EmptyState message="No focus sessions yet. Start a session to see your progress here." />
           ) : (
             <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={focusChartData} barCategoryGap="20%">
+              <BarChart data={focusChartData} barCategoryGap="20%" role="img" aria-label="Focus hours by day bar chart">
                 <XAxis
                   dataKey="label"
                   axisLine={false}

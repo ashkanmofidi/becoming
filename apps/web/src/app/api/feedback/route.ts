@@ -41,6 +41,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'description must be under 5000 characters' }, { status: 400 });
   }
 
+  // Validate optional fields
+  const VALID_SEVERITIES = ['minor', 'moderate', 'major', 'critical'];
+  if (body.severity !== undefined && body.severity !== null) {
+    if (typeof body.severity !== 'string' || !VALID_SEVERITIES.includes(body.severity)) {
+      return NextResponse.json({ error: `severity must be one of: ${VALID_SEVERITIES.join(', ')}` }, { status: 400 });
+    }
+  }
+  if (body.stepsToReproduce !== undefined && body.stepsToReproduce !== null) {
+    if (typeof body.stepsToReproduce !== 'string' || body.stepsToReproduce.length > 5000) {
+      return NextResponse.json({ error: 'stepsToReproduce must be under 5000 characters' }, { status: 400 });
+    }
+  }
+
   const submitResult = await feedbackService.submit({
     userId: session.userId,
     email: session.email,
@@ -50,8 +63,8 @@ export async function POST(request: NextRequest) {
     category: body.category ?? 'general',
     subject: body.subject ?? '',
     description: body.description ?? '',
-    stepsToReproduce: body.stepsToReproduce,
-    severity: body.severity,
+    stepsToReproduce: body.stepsToReproduce ?? null,
+    severity: body.severity ?? null,
     metadata: {
       appVersion: process.env.APP_VERSION ?? '3.1.0',
       page: body.page ?? '',

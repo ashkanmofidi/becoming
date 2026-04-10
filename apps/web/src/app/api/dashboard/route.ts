@@ -13,11 +13,19 @@ export async function GET(request: NextRequest) {
   const result = await requireAuth(request);
   if (result instanceof NextResponse) return result;
 
-  const data = await dashboardService.getDashboardData(result.session.userId);
+  try {
+    const data = await dashboardService.getDashboardData(result.session.userId);
 
-  return NextResponse.json(data, {
-    headers: {
-      'Cache-Control': 'private, max-age=30, stale-while-revalidate=60',
-    },
-  });
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'private, max-age=30, stale-while-revalidate=60',
+      },
+    });
+  } catch (err) {
+    console.error('Dashboard API error:', err instanceof Error ? err.message : err);
+    return NextResponse.json(
+      { error: 'Failed to load dashboard data. Please try again.' },
+      { status: 500 },
+    );
+  }
 }

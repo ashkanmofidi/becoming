@@ -10,6 +10,8 @@ interface SettingsContextValue {
   saveError: string | null;
   /** Update one or more settings. Applies instantly in UI, saves to server in background. */
   updateSettings: (partial: Partial<UserSettings>) => void;
+  /** Re-fetch settings from server (for cross-device sync). */
+  refreshFromServer: () => void;
 }
 
 const SettingsContext = createContext<SettingsContextValue>({
@@ -17,6 +19,7 @@ const SettingsContext = createContext<SettingsContextValue>({
   isLoaded: false,
   saveError: null,
   updateSettings: () => {},
+  refreshFromServer: () => {},
 });
 
 /**
@@ -73,6 +76,16 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     }, LIMITS.SETTINGS_DEBOUNCE_MS);
   }, []);
 
+  // Re-fetch settings from server — used when another device changes settings
+  const refreshFromServer = useCallback(() => {
+    fetch('/api/settings')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.settings) setSettings(data.settings);
+      })
+      .catch(() => {});
+  }, []);
+
   const updateSettings = useCallback((partial: Partial<UserSettings>) => {
     setSettings((prev) => {
       if (!prev) return prev;
@@ -92,7 +105,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, [saveToServer]);
 
   return (
-    <SettingsContext.Provider value={{ settings, isLoaded, saveError, updateSettings }}>
+    <SettingsContext.Provider value={{ settings, isLoaded, saveError, updateSettings, refreshFromServer }}>
       {children}
     </SettingsContext.Provider>
   );
