@@ -157,17 +157,17 @@ describe('settingsService integration', () => {
     custom.theme = 'light';
     await settingsService.saveSettings(USER_ID, custom);
 
-    // Reset merges defaults UNDER existing — existing values WIN
-    // This is the Data Guardian rule: never overwrite user data
+    // Factory reset: defaults REPLACE existing — this is an explicit user action
+    // ("Reset to Factory" button), not a migration merge
     const reset = await settingsService.resetToDefaults(USER_ID);
 
-    // Custom values preserved (not overwritten with defaults)
-    expect(reset.focusDuration).toBe(99);
-    expect(reset.theme).toBe('light');
+    // All values reset to factory defaults
+    expect(reset.focusDuration).toBe(25); // Default, not 99
+    expect(reset.theme).toBe('dark'); // Default, not 'light'
 
-    // Persisted with custom values intact
+    // Persisted with default values
     const stored = await mockKvClient.get<UserSettings>(settingsKey());
-    expect(stored!.focusDuration).toBe(99);
+    expect(stored!.focusDuration).toBe(25);
   });
 
   // ---------------------------------------------------------------

@@ -32,6 +32,14 @@ export async function PUT(request: NextRequest) {
   if (result instanceof NextResponse) return result;
 
   const body = await request.json();
+
+  // Handle factory reset: { reset: true } — resets settings to defaults, keeps sessions
+  if (body.reset === true) {
+    const defaults = await settingsService.resetToDefaults(result.session.userId);
+    broadcast(result.session.userId, 'settings-changed', defaults as unknown as Record<string, unknown>).catch(() => {});
+    return NextResponse.json({ success: true, settings: defaults });
+  }
+
   const settings = body.settings as UserSettings;
 
   if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {

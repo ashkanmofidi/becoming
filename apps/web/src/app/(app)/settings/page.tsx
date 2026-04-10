@@ -233,22 +233,31 @@ export default function SettingsPage() {
 
               <button
                 onClick={async () => {
-                  const res = await fetch('/api/settings');
-                  if (res.ok) {
-                    const data = await res.json();
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `becoming_backup_${new Date().toISOString().slice(0, 10)}.json`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                  }
+                  // Fetch settings + sessions in parallel for complete backup
+                  const [settingsRes, sessionsRes] = await Promise.all([
+                    fetch('/api/settings'),
+                    fetch('/api/sessions?type=all&limit=10000'),
+                  ]);
+                  const settingsData = settingsRes.ok ? await settingsRes.json() : {};
+                  const sessionsData = sessionsRes.ok ? await sessionsRes.json() : {};
+                  const backup = {
+                    exportedAt: new Date().toISOString(),
+                    settings: settingsData.settings ?? null,
+                    sessions: sessionsData.sessions ?? [],
+                    totalSessions: sessionsData.total ?? 0,
+                  };
+                  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `becoming_backup_${new Date().toISOString().slice(0, 10)}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
                 }}
                 className="px-4 py-3 bg-surface-900 border border-surface-700 rounded-lg text-sm text-surface-300 hover:text-white hover:border-surface-500 transition-colors text-left"
               >
                 <span className="font-medium block">JSON Backup</span>
-                <span className="text-xs text-surface-500">Export all settings and data</span>
+                <span className="text-xs text-surface-500">Export all settings and session data</span>
               </button>
 
               <button
@@ -289,20 +298,20 @@ export default function SettingsPage() {
         variant="destructive"
       />
 
-      {/* Clear All Data modal */}
+      {/* Clear All Data modal — two-step confirmation with typed input */}
       {showClearConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowClearConfirm(false)} />
           <div className="relative bg-bg-card border border-surface-700 rounded-xl p-6 max-w-sm w-full shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="clear-dialog-title">
             <h3 id="clear-dialog-title" className="text-white font-semibold mb-2">Clear All Data</h3>
             <p className="text-surface-300 text-sm mb-4">
-              This will permanently delete all sessions and reset settings. Type <strong className="text-red-400">CLEAR</strong> to confirm.
+              This will <strong className="text-red-400">permanently delete ALL your data</strong> including sessions, settings, and history. This cannot be undone. Type <strong className="text-red-400">DELETE</strong> to confirm.
             </p>
             <input
               type="text"
               value={clearInput}
               onChange={(e) => setClearInput(e.target.value)}
-              placeholder="Type CLEAR"
+              placeholder="Type DELETE"
               className="w-full px-3 py-2 mb-4 bg-surface-900 border border-surface-700 rounded-lg text-sm text-white placeholder-surface-500 focus:border-red-500 focus:outline-none"
               autoFocus
             />
@@ -314,14 +323,18 @@ export default function SettingsPage() {
                 Cancel
               </button>
               <button
-                disabled={clearInput !== 'CLEAR'}
-                onClick={() => {
+                disabled={clearInput !== 'DELETE'}
+                onClick={async () => {
                   setShowClearConfirm(false);
-                  fetch('/api/sessions', {
+                  // Delete ALL user data: sessions, settings, timer state
+                  await fetch('/api/sessions', {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionIds: ['__all__'] }),
-                  }).then(() => window.location.reload());
+                    body: JSON.stringify({ clearAll: true }),
+                  });
+                  // Log out and redirect to login
+                  await fetch('/api/auth/logout', { method: 'POST' });
+                  window.location.href = '/login';
                 }}
                 className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >

@@ -105,7 +105,20 @@ export async function DELETE(request: NextRequest) {
   if (result instanceof NextResponse) return result;
 
   const body = await request.json();
-  const { sessionIds } = body;
+  const { sessionIds, clearAll } = body;
+
+  // Clear ALL user data — nuclear option from Settings > Data Management
+  if (clearAll === true) {
+    const { sessionRepo } = await import('@/repositories/session.repo');
+    const { settingsRepo } = await import('@/repositories/settings.repo');
+    const { timerRepo } = await import('@/repositories/timer.repo');
+
+    await sessionRepo.deleteAllForUser(result.session.userId);
+    await settingsRepo.delete(result.session.userId);
+    await timerRepo.clearState(result.session.userId);
+
+    return NextResponse.json({ success: true, cleared: true });
+  }
 
   if (!sessionIds || !Array.isArray(sessionIds)) {
     return NextResponse.json({ error: 'sessionIds array required' }, { status: 400 });

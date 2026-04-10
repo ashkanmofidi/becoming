@@ -110,11 +110,17 @@ export const settingsService = {
   },
 
   /**
-   * Reset settings to defaults. PRD Section 6.11.
-   * Keeps sessions, only resets settings.
+   * Factory reset — replaces ALL settings with fresh defaults.
+   * PRD Section 6.11. Explicit user action. Keeps sessions.
    */
   async resetToDefaults(userId: string): Promise<UserSettings> {
-    return settingsRepo.resetToDefaults(userId);
+    const { createDefaultSettings } = await import('@becoming/shared');
+    const defaults = createDefaultSettings();
+    defaults.updatedAt = new Date().toISOString();
+    // Delete then write — bypasses the merge in save() so defaults fully replace
+    await settingsRepo.delete(userId);
+    await settingsRepo.save(userId, defaults);
+    return defaults;
   },
 
   /**
