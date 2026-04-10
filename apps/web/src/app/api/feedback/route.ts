@@ -15,6 +15,32 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { session } = result;
 
+  // Runtime input validation (P2-1)
+  const VALID_CATEGORIES = ['bug', 'feature_request', 'general'];
+  const category = body.category ?? 'general';
+  if (typeof category !== 'string' || !VALID_CATEGORIES.includes(category)) {
+    return NextResponse.json(
+      { error: `category must be one of: ${VALID_CATEGORIES.join(', ')}` },
+      { status: 400 },
+    );
+  }
+
+  const subject = body.subject ?? '';
+  if (typeof subject !== 'string' || subject.trim().length === 0) {
+    return NextResponse.json({ error: 'subject is required' }, { status: 400 });
+  }
+  if (subject.length > 200) {
+    return NextResponse.json({ error: 'subject must be under 200 characters' }, { status: 400 });
+  }
+
+  const description = body.description ?? '';
+  if (typeof description !== 'string' || description.trim().length === 0) {
+    return NextResponse.json({ error: 'description is required' }, { status: 400 });
+  }
+  if (description.length > 5000) {
+    return NextResponse.json({ error: 'description must be under 5000 characters' }, { status: 400 });
+  }
+
   const submitResult = await feedbackService.submit({
     userId: session.userId,
     email: session.email,

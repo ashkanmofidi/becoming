@@ -100,6 +100,17 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'sessionIds array required' }, { status: 400 });
   }
 
+  // Runtime validation (P2-1)
+  if (sessionIds.length === 0) {
+    return NextResponse.json({ error: 'sessionIds must not be empty' }, { status: 400 });
+  }
+  if (sessionIds.length > 100) {
+    return NextResponse.json({ error: 'sessionIds must contain at most 100 items' }, { status: 400 });
+  }
+  if (!sessionIds.every((id: unknown) => typeof id === 'string' && id.length > 0)) {
+    return NextResponse.json({ error: 'each sessionId must be a non-empty string' }, { status: 400 });
+  }
+
   const count = await sessionService.bulkDelete(result.session.userId, sessionIds);
   return NextResponse.json({ deleted: count });
 }

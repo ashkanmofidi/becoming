@@ -35,7 +35,10 @@ export const adminService = {
    * Get user list for admin. PRD Section 10.9.
    */
   async getUsers(): Promise<AdminUserEntry[]> {
-    // Scan for all user keys — use scan instead of keys for Upstash compatibility
+    // WARNING (P2-11): kvClient.keys() uses the Redis KEYS command which is O(N) and blocks
+    // the server while scanning all keys. This is acceptable for small beta user counts but
+    // will not scale. TODO: Maintain a Redis SET (e.g., "index:users") that tracks all user IDs.
+    // Then use SMEMBERS on that set instead of KEYS. Update the set on user create/delete.
     let userKeys: string[] = [];
     try {
       userKeys = await kvClient.keys('user:*');

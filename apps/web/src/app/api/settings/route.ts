@@ -31,8 +31,18 @@ export async function PUT(request: NextRequest) {
   const body = await request.json();
   const settings = body.settings as UserSettings;
 
-  if (!settings) {
-    return NextResponse.json({ error: 'settings object required' }, { status: 400 });
+  if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+    return NextResponse.json({ error: 'settings must be a non-null object' }, { status: 400 });
+  }
+
+  // Runtime bounds validation (P2-1)
+  if ('focusDuration' in settings) {
+    if (typeof settings.focusDuration !== 'number' || settings.focusDuration < 1 || settings.focusDuration > 120) {
+      return NextResponse.json(
+        { error: 'focusDuration must be a number between 1 and 120' },
+        { status: 400 },
+      );
+    }
   }
 
   // Route through settingsService which validates and enforces feature interactions

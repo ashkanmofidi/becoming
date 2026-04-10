@@ -24,6 +24,11 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <head>
         <link
+          rel="preload"
+          href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+          as="style"
+        />
+        <link
           href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />

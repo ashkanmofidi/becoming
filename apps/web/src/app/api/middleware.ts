@@ -104,6 +104,18 @@ export function rateLimit(
 }
 
 /**
+ * P2-7: Reject requests exceeding payload size limit.
+ * Add this check at the start of POST/PUT/PATCH/DELETE handlers.
+ */
+export function checkPayloadSize(request: NextRequest, maxBytes = 1_048_576): NextResponse | null {
+  const contentLength = request.headers.get('content-length');
+  if (contentLength && parseInt(contentLength) > maxBytes) {
+    return NextResponse.json({ error: 'Request too large' }, { status: 413 });
+  }
+  return null;
+}
+
+/**
  * Get client IP for audit logging.
  */
 export function getClientIP(request: NextRequest): string {

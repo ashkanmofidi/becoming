@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // P2-4: Disable source maps in production to prevent exposing source code
+  productionBrowserSourceMaps: false,
   transpilePackages: ['@becoming/shared'],
   images: {
     remotePatterns: [

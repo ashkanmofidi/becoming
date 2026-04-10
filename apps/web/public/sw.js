@@ -1,4 +1,6 @@
-const CACHE_NAME = 'becoming-v3.1.0';
+// P2-10: Cache name includes build date for automatic invalidation on deploy.
+// Update this value on each deploy (will be automated via CI later).
+const CACHE_NAME = 'becoming-' + '20260409';
 const STATIC_ASSETS = [
   '/',
   '/timer',
