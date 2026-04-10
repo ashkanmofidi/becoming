@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { ConnectionIndicator } from './ConnectionIndicator';
 import { usePathname } from 'next/navigation';
 import type { UserRole } from '@becoming/shared';
 
@@ -153,12 +154,14 @@ export function Sidebar({ userName, userEmail, userPicture, userRole, confirmLog
             {navLink('/users', 'User Management')}
             {navLink('/feedback', 'Feedback')}
             {isSuperAdmin && navLink('/audit', 'Audit Log')}
+            {isSuperAdmin && navLink('/system', 'System Health')}
           </>
         )}
       </nav>
 
-      {/* Footer Stats (PRD Section 4.4) */}
-      <div className="pt-4 border-t border-surface-900 mt-4">
+      {/* Footer: connection indicator + stats */}
+      <div className="pt-3 border-t border-surface-900 mt-4 space-y-3">
+        <ConnectionIndicator />
         <div className="grid grid-cols-2 gap-2 text-center">
           <div>
             <p className="text-amber font-mono text-sm font-semibold">—</p>
