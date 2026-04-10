@@ -39,6 +39,16 @@ export default function TimerPage() {
   const { timerState: syncedTimerState, forcSync } = useSync();
   const [intent, setIntent] = useState('');
   const [category, setCategory] = useState(settings?.defaultCategory ?? 'General');
+
+  // Midnight crossing detector — forces re-render when the date changes
+  // so daily counters reset automatically without requiring a refresh.
+  const [, setDateTick] = useState(0);
+  useEffect(() => {
+    const check = setInterval(() => {
+      setDateTick((t) => t + 1); // Force re-render every 60s to recompute todayStr
+    }, 60_000);
+    return () => clearInterval(check);
+  }, []);
   const isMuted = settings?.muted ?? false;
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -366,9 +376,12 @@ export default function TimerPage() {
     createdAt: new Date().toISOString(),
   }));
 
-  // Sessions are stored with UTC date (toISOString().split('T')[0]).
-  // Must compare with UTC date here too for consistency.
-  const todayStr = new Date().toISOString().split('T')[0] ?? '';
+  // Use user's local date for "today" — not UTC.
+  // Sessions are stored with UTC date, but the user's concept of "today"
+  // is their local timezone. We use toLocaleDateString with 'en-CA' format
+  // (YYYY-MM-DD) for consistent comparison.
+  const userTimezone = settings?.dayResetTimezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: userTimezone });
 
   // Filter to today's sessions only — single source for all UI elements
   const todayCompletedSessions = todaySessions.filter(

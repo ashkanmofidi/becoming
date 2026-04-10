@@ -231,8 +231,8 @@ function SidebarStats() {
   const { sessions } = useData();
 
   const { todayCount, streak } = useMemo(() => {
-    // Sessions stored with UTC date — compare with UTC here too
-    const today = new Date().toISOString().split('T')[0] ?? '';
+    // Use local date for "today" — user's concept of today is their timezone
+    const today = new Date().toLocaleDateString('en-CA');
 
     // TODAY: completed focus sessions today
     const todayFocus = sessions.filter(
@@ -256,7 +256,7 @@ function SidebarStats() {
     for (let i = startDay; i < 365; i++) {
       const d = new Date(date);
       d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0] ?? '';
+      const dateStr = d.toLocaleDateString('en-CA');
 
       if (i === 0 && todayHasSessions) continue; // Already counted today
 

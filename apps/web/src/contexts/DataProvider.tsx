@@ -89,7 +89,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         mode: 'focus' as TimerMode,
         status: 'completed',
         deletedAt: null,
-        date: now.toISOString().split('T')[0] ?? '',
+        date: now.toLocaleDateString('en-CA'),
         actualDuration: 60,
         startedAt: now.toISOString(),
         intent: null,

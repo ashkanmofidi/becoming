@@ -418,7 +418,7 @@ export const timerService = {
   async finalizeSession(
     userId: string,
     state: TimerState,
-    settings: { autoLogSessions: boolean },
+    settings: { autoLogSessions: boolean; dayResetTimezone?: string },
   ): Promise<SessionRecord | null> {
     if (!state.startedAt) return null;
 
@@ -429,10 +429,14 @@ export const timerService = {
       ? Math.floor((now.getTime() - new Date(state.overtimeStartedAt).getTime()) / 1000)
       : 0;
 
+    // Use user's timezone for the session date — "today" means the user's local date
+    const tz = settings.dayResetTimezone ?? 'UTC';
+    const localDate = startTime.toLocaleDateString('en-CA', { timeZone: tz });
+
     const session: SessionRecord = {
       id: `ses_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       userId,
-      date: startTime.toISOString().split('T')[0] ?? '',
+      date: localDate,
       startedAt: state.startedAt,
       completedAt: now.toISOString(),
       mode: state.mode,
@@ -471,10 +475,19 @@ export const timerService = {
     const startTime = new Date(state.startedAt);
     const elapsedSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);
 
+    // Use user's timezone for date
+    let localDate: string;
+    try {
+      const userSettings = await settingsRepo.get(userId);
+      localDate = startTime.toLocaleDateString('en-CA', { timeZone: userSettings.dayResetTimezone ?? 'UTC' });
+    } catch {
+      localDate = startTime.toISOString().split('T')[0] ?? '';
+    }
+
     const session: SessionRecord = {
       id: `ses_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       userId,
-      date: startTime.toISOString().split('T')[0] ?? '',
+      date: localDate,
       startedAt: state.startedAt,
       completedAt: now.toISOString(),
       mode: state.mode,
@@ -508,10 +521,19 @@ export const timerService = {
     const startTime = new Date(state.startedAt);
     const elapsedSeconds = Math.floor((now.getTime() - startTime.getTime()) / 1000);
 
+    // Use user's timezone for date
+    let localDate: string;
+    try {
+      const userSettings = await settingsRepo.get(userId);
+      localDate = startTime.toLocaleDateString('en-CA', { timeZone: userSettings.dayResetTimezone ?? 'UTC' });
+    } catch {
+      localDate = startTime.toISOString().split('T')[0] ?? '';
+    }
+
     const session: SessionRecord = {
       id: `ses_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       userId,
-      date: startTime.toISOString().split('T')[0] ?? '',
+      date: localDate,
       startedAt: state.startedAt,
       completedAt: now.toISOString(),
       mode: state.mode,
