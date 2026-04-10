@@ -22,9 +22,11 @@ interface TimerSyncState {
   pausedAt: string | null;
   configuredDuration: number;
   controllingDeviceId: string | null;
+  lastHeartbeatAt: string | null;
   intent: string | null;
   category: string;
   cycleNumber: number;
+  overtimeStartedAt: string | null;
 }
 
 interface SyncMetrics {

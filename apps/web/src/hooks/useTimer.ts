@@ -8,6 +8,8 @@ import { LIMITS } from '@becoming/shared';
 interface UseTimerOptions {
   showSeconds: boolean;
   defaultDurationMinutes: number; // From user settings — used when no timer state exists
+  /** External state from SyncProvider — updates from other devices */
+  syncedState?: TimerState | null;
   onComplete?: () => void;
   onTick?: (remaining: number) => void;
 }
@@ -60,6 +62,23 @@ export function useTimer(options: UseTimerOptions): UseTimerReturn {
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
     };
   }, []);
+
+  // MULTI-DEVICE SYNC: When SyncProvider detects a state change from another
+  // device (via polling), update local state so visuals re-render immediately.
+  // This is the critical wire that was missing — audio synced but visuals didn't.
+  useEffect(() => {
+    if (options.syncedState === undefined) return; // No sync provider connected
+    // Only update if the synced state is actually different from local state
+    const syncHash = JSON.stringify(options.syncedState);
+    const localHash = JSON.stringify(state);
+    if (syncHash !== localHash) {
+      setState(options.syncedState);
+      if (!options.syncedState) {
+        setRemainingSeconds(options.defaultDurationMinutes * 60);
+      }
+      setIsLoading(false);
+    }
+  }, [options.syncedState]);
 
   // Tick interval for countdown display
   useEffect(() => {

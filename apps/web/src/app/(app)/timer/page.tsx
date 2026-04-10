@@ -23,6 +23,7 @@ import { DailyFocusTime } from '@/components/timer/DailyFocusTime';
 // No direct tick-engine imports needed in this page.
 import { useSettings } from '@/contexts/SettingsContext';
 import { useData } from '@/contexts/DataProvider';
+import { useSync } from '@/contexts/SyncProvider';
 
 /**
  * Timer page. PRD Section 5.
@@ -33,6 +34,8 @@ import { useData } from '@/contexts/DataProvider';
 export default function TimerPage() {
   // Settings from global context — shared with Settings page, instant updates
   const { settings, updateSettings } = useSettings();
+  // Multi-device sync — timer state from SyncProvider (polled every 2s)
+  const { timerState: syncedTimerState, forcSync } = useSync();
   const [intent, setIntent] = useState('');
   const [category, setCategory] = useState(settings?.defaultCategory ?? 'General');
   const isMuted = settings?.muted ?? false;
@@ -46,6 +49,18 @@ export default function TimerPage() {
 
   // Session data from global DataProvider — prefetched on app init, always in memory
   const { sessions: todaySessions, refreshSessions: fetchTodaySessions, addOptimisticSession } = useData();
+
+  // When sync detects timer state changed (e.g., completion on another device),
+  // refresh session data so counters update without manual refresh.
+  const prevSyncStatusRef = useRef<string | null>(null);
+  useEffect(() => {
+    const currentStatus = syncedTimerState?.status ?? null;
+    if (prevSyncStatusRef.current && currentStatus !== prevSyncStatusRef.current) {
+      // State changed on server (possibly from another device) — refresh sessions
+      fetchTodaySessions();
+    }
+    prevSyncStatusRef.current = currentStatus;
+  }, [syncedTimerState?.status, fetchTodaySessions]);
 
   // Audio — mute state controls master gain in the engine. No per-call-site checks.
   const audio = useAudio(settings, isMuted);
@@ -66,6 +81,7 @@ export default function TimerPage() {
   } = useTimer({
     showSeconds: settings?.showSeconds ?? true,
     defaultDurationMinutes: settings?.focusDuration ?? 25,
+    syncedState: syncedTimerState as import('@becoming/shared').TimerState | null | undefined,
     onComplete: () => {
       const mode = state?.mode;
       if (mode === 'focus') {
