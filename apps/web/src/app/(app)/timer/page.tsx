@@ -96,8 +96,9 @@ export default function TimerPage() {
       } else {
         audio.playBreakEnd();
       }
-      // AudioSyncProvider handles tick/ambient stop via timer state polling.
-      // No manual stopTick/stopAmbient needed here.
+      // Force SyncProvider to detect the state change immediately
+      // so AudioSyncProvider stops tick/ambient without 2s poll delay
+      forcSync();
 
       // OPTIMISTIC UPDATE: add a synthetic session to the local array IMMEDIATELY
       // so the counter/progress bar/cycle dots update in the same render cycle.
@@ -195,22 +196,24 @@ export default function TimerPage() {
       audio.playActivation();
     }
 
-    // AudioSyncProvider detects timer state change via polling and starts tick/ambient
     wakeLock.acquire();
     await actions.start(state?.mode ?? 'focus', intent || null, category);
-  }, [audio, wakeLock, actions, state?.mode, intent, category, settings?.tickDuringFocus, settings?.tickDuringBreaks]);
+    // Force SyncProvider to re-poll immediately so AudioSyncProvider
+    // detects 'running' state and starts tick/ambient without 2s delay
+    forcSync();
+  }, [audio, wakeLock, actions, state?.mode, intent, category, settings?.tickDuringFocus, settings?.tickDuringBreaks, forcSync]);
 
   const handlePause = useCallback(async () => {
     audio.playPause();
-    // AudioSyncProvider detects paused state and stops tick/ambient
     await actions.pause();
-  }, [audio, actions]);
+    forcSync(); // Immediate sync so tick stops without 2s delay
+  }, [audio, actions, forcSync]);
 
   const handleResume = useCallback(async () => {
     audio.playResume();
-    // AudioSyncProvider detects running state and resumes tick/ambient
     await actions.resume();
-  }, [audio, actions]);
+    forcSync(); // Immediate sync so tick resumes without 2s delay
+  }, [audio, actions, forcSync]);
 
   const handleSkip = useCallback(() => {
     const mode = state?.mode;
@@ -226,12 +229,12 @@ export default function TimerPage() {
       title,
       message,
       onConfirm: async () => {
-        // AudioSyncProvider handles tick/ambient via polling
         await actions.skip();
+        forcSync();
         setConfirmModal((m) => ({ ...m, isOpen: false }));
       },
     });
-  }, [actions, audio, state?.mode]);
+  }, [actions, audio, state?.mode, forcSync]);
 
   const handleFinishEarly = useCallback(() => {
     // Check elapsed time — if under 10 seconds, show "too short" prompt
@@ -245,8 +248,8 @@ export default function TimerPage() {
         title: 'Too short to log',
         message: 'Less than 10 seconds elapsed. Skip instead?',
         onConfirm: async () => {
-          // AudioSyncProvider handles tick/ambient via polling
           await actions.skip();
+          forcSync();
           setConfirmModal((m) => ({ ...m, isOpen: false }));
         },
       });
@@ -264,9 +267,9 @@ export default function TimerPage() {
       });
     }
 
-    actions.finishEarly();
+    actions.finishEarly().then(() => forcSync());
     fetchTodaySessions(); // Background sync
-  }, [actions, audio, state?.startedAt, state?.mode, fetchTodaySessions]);
+  }, [actions, audio, state?.startedAt, state?.mode, fetchTodaySessions, forcSync]);
 
   const handleReset = useCallback(() => {
     setConfirmModal({
@@ -275,11 +278,11 @@ export default function TimerPage() {
       message: `Reset to ${state?.configuredDuration ?? 25}:00?`,
       onConfirm: async () => {
         await actions.reset();
-        // AudioSyncProvider handles tick/ambient via polling
+        forcSync();
         setConfirmModal((m) => ({ ...m, isOpen: false }));
       },
     });
-  }, [actions, audio, state?.configuredDuration]);
+  }, [actions, audio, state?.configuredDuration, forcSync]);
 
   const handleAbandon = useCallback(() => {
     setConfirmModal({
@@ -452,7 +455,7 @@ export default function TimerPage() {
         onFinishEarly={handleFinishEarly}
         onReset={handleReset}
         onAbandon={handleAbandon}
-        onStopOvertime={() => actions.stopOvertime()}
+        onStopOvertime={() => actions.stopOvertime().then(() => forcSync())}
         onTakeOver={() => actions.takeOver()}
       />
 
