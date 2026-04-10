@@ -17,6 +17,7 @@ let volumeLevel = 1;
 let schedulerTimer: ReturnType<typeof setInterval> | null = null;
 let nextTickTime = 0;
 let bufferLoading = false;
+let useLoudTick = false; // Last 30s: louder, sharper tick
 
 const TICK_INTERVAL = 1.0; // 1 second
 const SCHEDULE_AHEAD = 0.15; // schedule 150ms ahead
@@ -71,7 +72,7 @@ function runScheduler(): void {
   if (!ctx || !isRunning) return;
   const currentTime = ctx.currentTime;
   while (nextTickTime < currentTime + SCHEDULE_AHEAD) {
-    scheduleTick(nextTickTime);
+    scheduleTick(nextTickTime, useLoudTick);
     nextTickTime += TICK_INTERVAL;
   }
 }
@@ -91,6 +92,7 @@ export async function startTick(): Promise<void> {
 
 export function stopTick(): void {
   isRunning = false;
+  useLoudTick = false;
   if (schedulerTimer) {
     clearInterval(schedulerTimer);
     schedulerTimer = null;
@@ -109,6 +111,10 @@ export function setTickVolume(volume: number): void {
   if (masterGain && ctx && !isMuted) {
     masterGain.gain.setTargetAtTime(volumeLevel, ctx.currentTime, 0.02);
   }
+}
+
+export function setTickLoud(loud: boolean): void {
+  useLoudTick = loud;
 }
 
 export function isTickRunning(): boolean {

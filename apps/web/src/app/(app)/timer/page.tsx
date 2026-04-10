@@ -10,6 +10,7 @@ import { useWakeLock } from '@/hooks/useWakeLock';
 import { useShortcuts } from '@/hooks/useShortcuts';
 import { useBroadcast } from '@/hooks/useBroadcast';
 import { useDynamicFavicon } from '@/hooks/useDynamicFavicon';
+import { setTickLoud } from '@/lib/tick-engine';
 import { ModeSelector } from '@/components/timer/ModeSelector';
 import { TimerRing } from '@/components/timer/TimerRing';
 import { PlaybackControls } from '@/components/timer/PlaybackControls';
@@ -115,17 +116,61 @@ export default function TimerPage() {
       fetchTodaySessions();
     },
     onTick: (remaining) => {
-      // Tick SOUNDS are handled by GlobalTickEngine (lives in layout, survives all navigation).
-      // This callback only handles haptics (page-local, fine to re-mount).
       const currentSecond = Math.floor(remaining);
       if (currentSecond === lastTickedSecondRef.current) return;
       lastTickedSecondRef.current = currentSecond;
 
+      // Last 30s: switch to louder, sharper tick sound
+      if (settings?.last30sTicking) {
+        setTickLoud(remaining <= 30 && remaining > 0);
+      }
+
+      // Last 10s: haptic feedback
       if (remaining <= 10 && remaining > 0) {
         audio.playLast10sHaptic();
       }
     },
   });
+
+  // Auto-start breaks/focus (PRD 6.2): when a session completes and transitions
+  // to idle+break (or idle+focus after break), auto-start after 5 seconds.
+  const prevModeRef = useRef<string | null>(null);
+  const autoStartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const currentMode = state?.mode ?? null;
+    const currentStatus = state?.status;
+    const prevMode = prevModeRef.current;
+
+    // Detect transition: status became idle AND mode changed (completion happened)
+    if (currentStatus === 'idle' && prevMode && currentMode && prevMode !== currentMode) {
+      const shouldAutoStart =
+        (currentMode === 'break' || currentMode === 'long_break') && settings?.autoStartBreaks ||
+        currentMode === 'focus' && settings?.autoStartFocus;
+
+      if (shouldAutoStart) {
+        // Auto-start after 5 seconds
+        if (autoStartTimerRef.current) clearTimeout(autoStartTimerRef.current);
+        autoStartTimerRef.current = setTimeout(async () => {
+          await audio.ensureInitialized();
+          await actions.start(currentMode, intent || null, category);
+          forcSync();
+        }, 5000);
+      }
+    }
+
+    // If user manually starts or mode changes, cancel any pending auto-start
+    if (currentStatus === 'running') {
+      if (autoStartTimerRef.current) {
+        clearTimeout(autoStartTimerRef.current);
+        autoStartTimerRef.current = null;
+      }
+    }
+
+    prevModeRef.current = currentMode;
+    return () => {
+      if (autoStartTimerRef.current) clearTimeout(autoStartTimerRef.current);
+    };
+  }, [state?.status, state?.mode, settings?.autoStartBreaks, settings?.autoStartFocus, actions, audio, intent, category, forcSync]);
 
   // Tick/ambient audio: fully controlled by AudioSyncProvider at layout level.
   // No tick/ambient control in this component — settings changes apply instantly
