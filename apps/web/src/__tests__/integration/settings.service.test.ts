@@ -150,23 +150,24 @@ describe('settingsService integration', () => {
   // resetToDefaults
   // ---------------------------------------------------------------
 
-  it('resetToDefaults returns fresh defaults', async () => {
+  it('resetToDefaults preserves existing user data (DATA GUARDIAN)', async () => {
     // First save custom settings
     const custom = createDefaultSettings();
     custom.focusDuration = 99;
     custom.theme = 'light';
     await settingsService.saveSettings(USER_ID, custom);
 
-    // Now reset
+    // Reset merges defaults UNDER existing — existing values WIN
+    // This is the Data Guardian rule: never overwrite user data
     const reset = await settingsService.resetToDefaults(USER_ID);
-    const defaults = createDefaultSettings();
 
-    expect(reset.focusDuration).toBe(defaults.focusDuration);
-    expect(reset.theme).toBe(defaults.theme);
+    // Custom values preserved (not overwritten with defaults)
+    expect(reset.focusDuration).toBe(99);
+    expect(reset.theme).toBe('light');
 
-    // Persisted as defaults
+    // Persisted with custom values intact
     const stored = await mockKvClient.get<UserSettings>(settingsKey());
-    expect(stored!.focusDuration).toBe(defaults.focusDuration);
+    expect(stored!.focusDuration).toBe(99);
   });
 
   // ---------------------------------------------------------------
