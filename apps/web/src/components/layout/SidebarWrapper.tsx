@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
+import { useSettings } from '@/contexts/SettingsContext';
 import type { UserRole } from '@becoming/shared';
 
 /**
  * Client-side wrapper that fetches user session data for the Sidebar.
+ * Reads settings from SettingsContext (no duplicate fetch).
  * Handles session expiry with timer-active check.
  */
 export function SidebarWrapper() {
+  const { settings } = useSettings();
   const [user, setUser] = useState<{
     name: string;
     email: string;
@@ -16,7 +19,9 @@ export function SidebarWrapper() {
     role: UserRole;
   } | null>(null);
   const [showExpiryWarning, setShowExpiryWarning] = useState(false);
-  const [confirmLogout, setConfirmLogout] = useState(true);
+
+  // Read confirmLogout from settings context (no duplicate API call)
+  const confirmLogout = settings?.confirmLogoutWithActiveTimer ?? true;
 
   useEffect(() => {
     fetch('/api/auth/session')
@@ -44,15 +49,6 @@ export function SidebarWrapper() {
       .then((data) => {
         if (data?.authenticated && data.user) {
           setUser(data.user);
-          // Fetch logout confirmation preference
-          fetch('/api/settings')
-            .then((r) => r.json())
-            .then((s) => {
-              if (s.settings?.confirmLogoutWithActiveTimer !== undefined) {
-                setConfirmLogout(s.settings.confirmLogoutWithActiveTimer);
-              }
-            })
-            .catch(() => {});
         }
       })
       .catch(() => {});

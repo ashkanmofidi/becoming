@@ -63,7 +63,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const refreshSessions = useCallback(async () => {
     try {
-      const res = await fetch('/api/sessions?type=all&limit=500');
+      const res = await fetch('/api/sessions?type=all&limit=100');
       if (res.ok) {
         const data = await res.json();
         setSessions(data.sessions ?? []);
@@ -102,15 +102,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     ]);
   }, []);
 
-  // Prefetch everything on mount — single loading gate
+  // Prefetch on mount — sessions are fast (needed for counters), dashboard is slow (background)
   useEffect(() => {
     if (fetchedRef.current) return;
     fetchedRef.current = true;
 
-    Promise.all([
-      refreshSessions(),
-      refreshDashboard(),
-    ]).finally(() => setIsReady(true));
+    // Sessions fetch is fast and needed for timer page counters — mark ready when it completes
+    refreshSessions().finally(() => setIsReady(true));
+    // Dashboard is slow (aggregates all sessions) — load in background, don't block UI
+    refreshDashboard();
   }, [refreshSessions, refreshDashboard]);
 
   // Background refresh every 30 seconds

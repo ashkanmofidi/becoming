@@ -1,18 +1,16 @@
 'use client';
 
 import { useSettings } from '@/contexts/SettingsContext';
-import { useData } from '@/contexts/DataProvider';
 
 /**
- * Single loading gate — shows a branded loading screen until
- * ALL data (settings + sessions + dashboard) is prefetched.
- * Once ready, never shows again during the session.
+ * Loading gate — only blocks on SETTINGS (fast, single KV read).
+ * Sessions and dashboard load in parallel but don't block rendering.
+ * Result: app shell renders in ~200ms, data fills in progressively.
  */
 export function AppReadyGate({ children }: { children: React.ReactNode }) {
   const { isLoaded: settingsReady } = useSettings();
-  const { isReady: dataReady } = useData();
 
-  if (!settingsReady || !dataReady) {
+  if (!settingsReady) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-bg-primary">
         <div className="text-center">

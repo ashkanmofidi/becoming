@@ -227,10 +227,10 @@ function ComparisonRow({
 /* ---------- Main Page ---------- */
 
 export default function DashboardPage() {
-  // Data prefetched by DataProvider on app init — no loading state needed
+  // Dashboard data loads in background — may be null on first render
   const { dashboard: data } = useData();
   const [focusRange, setFocusRange] = useState<'7d' | '30d'>('7d');
-  const loading = false; // AppReadyGate ensures data is ready before render
+  const loading = !data; // Show skeleton until dashboard data arrives
   const error: string | null = null;
 
   /* --- Loading skeleton --- */
