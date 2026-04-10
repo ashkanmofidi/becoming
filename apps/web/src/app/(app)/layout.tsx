@@ -6,6 +6,7 @@ import { SettingsProvider } from '@/contexts/SettingsContext';
 import { DataProvider } from '@/contexts/DataProvider';
 import { SyncProvider } from '@/contexts/SyncProvider';
 import { AudioSyncProvider } from '@/components/audio/AudioSyncProvider';
+import { DisplaySync } from '@/components/layout/DisplaySync';
 import { AppReadyGate } from '@/components/layout/AppReadyGate';
 
 /**
@@ -35,6 +36,7 @@ export default async function AppLayout({
       <DataProvider>
         <SyncProvider>
           <AudioSyncProvider />
+          <DisplaySync />
           <AppReadyGate>
             <div className="flex min-h-screen">
               <SidebarWrapper />
