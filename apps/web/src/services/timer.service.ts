@@ -21,9 +21,12 @@ export const timerService = {
     if (!state) return null;
 
     // Check heartbeat timeout (PRD 5.2.7: 60s without heartbeat clears controller)
+    // Inline check to avoid redundant KV read (isHeartbeatExpired does another getState)
     if ((state.status === 'running' || state.status === 'paused') && state.controllingDeviceId) {
-      const expired = await timerRepo.isHeartbeatExpired(userId);
-      if (expired) {
+      const heartbeatAge = state.lastHeartbeatAt
+        ? Date.now() - new Date(state.lastHeartbeatAt).getTime()
+        : Infinity;
+      if (heartbeatAge > 60_000) {
         // Stale running timer — clear controller so any device can claim it
         state.controllingDeviceId = null;
         state.lastHeartbeatAt = null;
@@ -59,17 +62,21 @@ export const timerService = {
     intent: string | null,
     category: string,
   ): Promise<TimerState> {
-    const existing = await timerRepo.getState(userId);
+    // Parallel fetch: timer state + settings (independent reads)
+    const [existing, settings] = await Promise.all([
+      timerRepo.getState(userId),
+      settingsRepo.get(userId),
+    ]);
 
     // Reject if already running on another device (PRD 5.2.7)
     if (existing && existing.status === 'running' && existing.controllingDeviceId !== deviceId) {
-      const expired = await timerRepo.isHeartbeatExpired(userId);
-      if (!expired) {
+      const heartbeatAge = existing.lastHeartbeatAt
+        ? Date.now() - new Date(existing.lastHeartbeatAt).getTime()
+        : Infinity;
+      if (heartbeatAge <= 60_000) {
         throw new TimerConflictError('Timer is running on another device');
       }
     }
-
-    const settings = await settingsRepo.get(userId);
     const duration = getDurationForMode(mode, settings);
 
     const now = new Date().toISOString();

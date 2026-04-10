@@ -11,8 +11,11 @@ export const dashboardService = {
    * Get all dashboard data for a user.
    */
   async getDashboardData(userId: string): Promise<DashboardData> {
-    const settings = await settingsRepo.get(userId);
-    const allSessions = await sessionRepo.findByUser(userId, { offset: 0, limit: 10000 });
+    // Parallel fetch: settings + sessions are independent
+    const [settings, allSessions] = await Promise.all([
+      settingsRepo.get(userId),
+      sessionRepo.findByUser(userId, { offset: 0, limit: 10000 }),
+    ]);
     const completed = allSessions.filter((s) => s.status === 'completed' && s.deletedAt === null);
     const focusSessions = completed.filter((s) => s.mode === 'focus');
 

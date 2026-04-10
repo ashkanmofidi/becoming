@@ -23,12 +23,10 @@ export const auditRepo = {
     const offset = options?.offset ?? 0;
     const limit = options?.limit ?? 50;
     const ids = await kvClient.lrange<string>(keys.auditList(), offset, offset + limit - 1);
-    const entries: AuditLogEntry[] = [];
-    for (const id of ids) {
-      const entry = await kvClient.get<AuditLogEntry>(keys.audit(id));
-      if (entry) entries.push(entry);
-    }
-    return entries;
+    const results = await Promise.all(
+      ids.map((id) => kvClient.get<AuditLogEntry>(keys.audit(id))),
+    );
+    return results.filter((e): e is AuditLogEntry => e !== null);
   },
 
   async findByActor(actorId: string, limit = 50): Promise<AuditLogEntry[]> {

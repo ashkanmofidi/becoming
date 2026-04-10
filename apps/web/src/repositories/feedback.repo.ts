@@ -23,12 +23,10 @@ export const feedbackRepo = {
     const offset = options?.offset ?? 0;
     const limit = options?.limit ?? 50;
     const ids = await kvClient.lrange<string>(keys.feedbackList(), offset, offset + limit - 1);
-    const items: FeedbackSubmission[] = [];
-    for (const id of ids) {
-      const feedback = await kvClient.get<FeedbackSubmission>(keys.feedback(id));
-      if (feedback) items.push(feedback);
-    }
-    return items;
+    const results = await Promise.all(
+      ids.map((id) => kvClient.get<FeedbackSubmission>(keys.feedback(id))),
+    );
+    return results.filter((f): f is FeedbackSubmission => f !== null);
   },
 
   async getCount(): Promise<number> {
