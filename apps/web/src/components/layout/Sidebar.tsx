@@ -231,6 +231,7 @@ function SidebarStats() {
   const { sessions } = useData();
 
   const { todayCount, streak } = useMemo(() => {
+    // Sessions stored with UTC date — compare with UTC here too
     const today = new Date().toISOString().split('T')[0] ?? '';
 
     // TODAY: completed focus sessions today

@@ -312,14 +312,28 @@ export default function TimerPage() {
     createdAt: new Date().toISOString(),
   }));
 
-  const dailyGoal = getDailyGoalStatus(
-    todaySessions as Parameters<typeof getDailyGoalStatus>[0],
-    settings?.dailyGoal ?? 4,
-    new Date().toISOString().split('T')[0] ?? '',
+  // Sessions are stored with UTC date (toISOString().split('T')[0]).
+  // Must compare with UTC date here too for consistency.
+  const todayStr = new Date().toISOString().split('T')[0] ?? '';
+
+  // Filter to today's sessions only — single source for all UI elements
+  const todayCompletedSessions = todaySessions.filter(
+    (s: { date: string; status: string; deletedAt: string | null }) =>
+      s.date === todayStr && s.status === 'completed' && !s.deletedAt,
+  );
+  const todayFocusSessions = todayCompletedSessions.filter(
+    (s: { mode: string }) => s.mode === 'focus',
   );
 
+  const dailyGoal = {
+    completed: todayFocusSessions.length,
+    target: settings?.dailyGoal ?? 4,
+    met: todayFocusSessions.length >= (settings?.dailyGoal ?? 4),
+    exceeded: todayFocusSessions.length > (settings?.dailyGoal ?? 4),
+  };
+
   const cycleStatus = getCycleStatus(
-    todaySessions as Parameters<typeof getCycleStatus>[0],
+    todayCompletedSessions as Parameters<typeof getCycleStatus>[0],
     settings?.cycleCount ?? 4,
   );
 
@@ -483,9 +497,7 @@ export default function TimerPage() {
       {/* Daily Focus Time — only focus sessions count */}
       <DailyFocusTime
         totalMinutes={Math.round(
-          todaySessions
-            .filter((s) => s.mode === 'focus' && s.status === 'completed' && !s.deletedAt)
-            .reduce((sum, s) => sum + s.actualDuration, 0) / 60
+          todayFocusSessions.reduce((sum: number, s: { actualDuration: number }) => sum + s.actualDuration, 0) / 60
         )}
         activeElapsedSeconds={
           state?.status === 'running' && state?.mode === 'focus' && state?.startedAt
@@ -498,7 +510,7 @@ export default function TimerPage() {
       <CycleTracker
         cycleNumber={cycleStatus.cycleNumber}
         dots={cycleStatus.dots}
-        hasAnySessions={todaySessions.length > 0}
+        hasAnySessions={todayCompletedSessions.length > 0}
       />
 
       {/* Intent + Category Bar (PRD 5.6) */}
