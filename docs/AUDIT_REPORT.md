@@ -9,10 +9,10 @@
 
 | Severity | Count | Fixed | Remaining |
 |----------|-------|-------|-----------|
-| P0 (Critical) | 3 | 2 | 1 |
-| P1 (High) | 8 | 5 | 3 |
-| P2 (Medium) | 12 | 0 | 12 |
-| P3 (Low) | 7 | 0 | 7 |
+| P0 (Critical) | 3 | 2 | 1 (tokeninfo→JWKS) |
+| P1 (High) | 8 | 6 | 2 (npm audit, @vercel/kv deprecation) |
+| P2 (Medium) | 12 | 12 | 0 |
+| P3 (Low) | 7 | 7 | 0 |
 
 ---
 
