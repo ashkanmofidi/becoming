@@ -35,10 +35,11 @@ export async function GET(request: NextRequest) {
   }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    const stack = err instanceof Error ? err.stack : '';
-    // Surface the actual error for debugging — remove after fix
+    // Log full error server-side, return safe message to client
+    // eslint-disable-next-line no-console
+    console.error('Admin API error:', message, err instanceof Error ? err.stack : '');
     return NextResponse.json(
-      { error: 'Admin API error', message, stack: stack?.split('\n').slice(0, 5) },
+      { error: 'An error occurred. Please try again.' },
       { status: 500 },
     );
   }
