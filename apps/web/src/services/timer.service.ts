@@ -169,8 +169,13 @@ export const timerService = {
       return { state, session: null };
     }
 
-    // Complete and log session
-    const session = await this.finalizeSession(userId, state, settings);
+    // Log session — non-fatal. Timer MUST transition even if logging fails.
+    let session: SessionRecord | null = null;
+    try {
+      session = await this.finalizeSession(userId, state, settings);
+    } catch (err) {
+      logger.error('Session logging failed on completion — timer will still transition', { userId, error: err });
+    }
 
     // Determine next mode (PRD 5.1.3)
     const nextMode = getNextMode(state.mode, state.cycleNumber, settings.cycleCount);
@@ -205,7 +210,13 @@ export const timerService = {
 
     assertController(state, deviceId);
     const settings = await settingsRepo.get(userId);
-    const session = await this.finalizeSession(userId, state, settings);
+
+    let session: SessionRecord | null = null;
+    try {
+      session = await this.finalizeSession(userId, state, settings);
+    } catch (err) {
+      logger.error('Session logging failed on stopOvertime — timer will still transition', { userId, error: err });
+    }
 
     const nextMode = getNextMode(state.mode, state.cycleNumber, settings.cycleCount);
     state.status = 'idle';
