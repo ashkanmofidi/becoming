@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, rateLimit } from '@/app/api/middleware';
 import { settingsService } from '@/services/settings.service';
+import { broadcast } from '@/lib/pusher-server';
 import type { UserSettings } from '@becoming/shared';
 
 /**
@@ -39,5 +40,8 @@ export async function PUT(request: NextRequest) {
 
   // Route through settingsService which validates and enforces feature interactions
   const validated = await settingsService.saveSettings(result.session.userId, settings);
+  // Broadcast settings change to all devices (fire-and-forget)
+  broadcast(result.session.userId, 'settings-changed', validated as unknown as Record<string, unknown>).catch(() => {});
+
   return NextResponse.json({ success: true, settings: validated });
 }

@@ -1,19 +1,9 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { getPusherClient } from '@/lib/pusher-client';
 
 type ConnectionStatus = 'connected' | 'syncing' | 'offline';
-
-interface SyncState {
-  /** Current timer state from server */
-  timerState: TimerSyncState | null;
-  /** Connection status for UI indicator */
-  connectionStatus: ConnectionStatus;
-  /** Sync metrics for admin dashboard */
-  metrics: SyncMetrics;
-  /** Force an immediate sync (e.g., after user action) */
-  forcSync: () => void;
-}
 
 interface TimerSyncState {
   status: string;
@@ -31,143 +21,181 @@ interface TimerSyncState {
 
 interface SyncMetrics {
   pollCount: number;
+  pushCount: number;
   avgLatencyMs: number;
   lastSyncAt: string | null;
   failedSyncs: number;
-  activeConnections: number; // Estimated from BroadcastChannel
   pollsPerMinute: number;
+  transport: 'pusher' | 'polling';
 }
 
-const POLL_INTERVAL = 2000; // 2 seconds
-const BROADCAST_CHANNEL = 'becoming-sync';
+interface SyncContextValue {
+  timerState: TimerSyncState | null;
+  connectionStatus: ConnectionStatus;
+  metrics: SyncMetrics;
+  forcSync: () => void;
+}
 
-const SyncContext = createContext<SyncState>({
+const SyncContext = createContext<SyncContextValue>({
   timerState: null,
   connectionStatus: 'syncing',
-  metrics: { pollCount: 0, avgLatencyMs: 0, lastSyncAt: null, failedSyncs: 0, activeConnections: 1, pollsPerMinute: 0 },
+  metrics: { pollCount: 0, pushCount: 0, avgLatencyMs: 0, lastSyncAt: null, failedSyncs: 0, pollsPerMinute: 0, transport: 'polling' },
   forcSync: () => {},
 });
 
+const BROADCAST_CHANNEL = 'becoming-sync';
+const POLL_INTERVAL = 2000; // Fallback polling interval
+
 /**
- * SyncProvider — real-time multi-device sync via polling + BroadcastChannel.
+ * SyncProvider — real-time multi-device sync.
  *
- * TRANSPORT ABSTRACTION: This provider is the single interface all components
- * use for synced state. The internal transport (polling) can be swapped for
- * SSE/WebSocket without changing any consumer code.
+ * TRANSPORT PRIORITY:
+ * 1. Pusher (if configured) — ~100ms latency, server push
+ * 2. BroadcastChannel — ~1ms, same-browser tabs only
+ * 3. Polling (fallback) — 2s interval if Pusher not configured
  *
- * Phase 2 upgrade: replace the setInterval polling in this file with an
- * EventSource connection. Everything else stays the same.
+ * All three can run simultaneously. First update wins (dedup by lastUpdated).
  */
 export function SyncProvider({ children }: { children: React.ReactNode }) {
   const [timerState, setTimerState] = useState<TimerSyncState | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('syncing');
   const [metrics, setMetrics] = useState<SyncMetrics>({
-    pollCount: 0,
-    avgLatencyMs: 0,
-    lastSyncAt: null,
-    failedSyncs: 0,
-    activeConnections: 1,
-    pollsPerMinute: 0,
+    pollCount: 0, pushCount: 0, avgLatencyMs: 0, lastSyncAt: null,
+    failedSyncs: 0, pollsPerMinute: 0, transport: 'polling',
   });
 
+  const lastUpdatedRef = useRef(0);
   const pollCountRef = useRef(0);
+  const pushCountRef = useRef(0);
   const failedCountRef = useRef(0);
   const latencySumRef = useRef(0);
-  const minuteStartRef = useRef(Date.now());
-  const minutePollCountRef = useRef(0);
   const broadcastRef = useRef<BroadcastChannel | null>(null);
-  const prevStateHashRef = useRef('');
+  const pusherReady = useRef(false);
 
-  // BroadcastChannel for same-browser tab sync (instant, no server)
+  // Deduplication: only update if this event is newer than what we have
+  const updateState = useCallback((newState: TimerSyncState | null, source: 'pusher' | 'broadcast' | 'poll', timestamp?: number) => {
+    const ts = timestamp ?? Date.now();
+    if (ts <= lastUpdatedRef.current) return; // Stale — already have newer data
+    lastUpdatedRef.current = ts;
+
+    setTimerState(newState);
+    setConnectionStatus('connected');
+    setMetrics((prev) => ({
+      ...prev,
+      lastSyncAt: new Date().toISOString(),
+      [source === 'pusher' ? 'pushCount' : 'pollCount']: source === 'pusher' ? pushCountRef.current++ : pollCountRef.current++,
+      transport: pusherReady.current ? 'pusher' : 'polling',
+    }));
+
+    // Broadcast to other tabs via BroadcastChannel
+    if (source !== 'broadcast') {
+      broadcastRef.current?.postMessage({ type: 'timer-update', state: newState, lastUpdated: ts });
+    }
+  }, []);
+
+  // ─── 1. PUSHER (primary transport) ───────────────────────
+
+  useEffect(() => {
+    const pusher = getPusherClient();
+    if (!pusher) return; // Not configured — will use polling
+
+    // We need the userId to subscribe to the right channel.
+    // Fetch it from the session API.
+    fetch('/api/auth/session')
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (!data?.user?.id) return;
+
+        const channel = pusher.subscribe(`user-${data.user.id}`);
+        pusherReady.current = true;
+
+        channel.bind('timer-update', (payload: Record<string, unknown>) => {
+          updateState(payload as unknown as TimerSyncState, 'pusher', payload.lastUpdated as number);
+        });
+
+        channel.bind('session-logged', () => {
+          // Trigger a data refresh for session counters
+          // DataProvider handles this via its own refresh
+        });
+
+        channel.bind('settings-changed', () => {
+          // SettingsProvider handles settings sync
+        });
+
+        setConnectionStatus('connected');
+      })
+      .catch(() => {
+        // Pusher setup failed — polling fallback active
+      });
+
+    // Pusher connection state monitoring
+    pusher.connection.bind('connected', () => setConnectionStatus('connected'));
+    pusher.connection.bind('connecting', () => setConnectionStatus('syncing'));
+    pusher.connection.bind('disconnected', () => setConnectionStatus('offline'));
+    pusher.connection.bind('unavailable', () => setConnectionStatus('offline'));
+
+    return () => {
+      // Don't disconnect on unmount — Pusher connection should persist
+    };
+  }, [updateState]);
+
+  // ─── 2. BROADCASTCHANNEL (same-browser tabs) ─────────────
+
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return;
-
     const channel = new BroadcastChannel(BROADCAST_CHANNEL);
     broadcastRef.current = channel;
 
     channel.onmessage = (event) => {
-      const msg = event.data;
-      if (msg.type === 'timer_state' && msg.state) {
-        setTimerState(msg.state);
-      }
-      if (msg.type === 'ping') {
-        // Count active tabs
-        channel.postMessage({ type: 'pong' });
+      if (event.data?.type === 'timer-update') {
+        updateState(event.data.state, 'broadcast', event.data.lastUpdated);
       }
     };
 
     return () => { channel.close(); broadcastRef.current = null; };
-  }, []);
+  }, [updateState]);
 
-  // Broadcast state changes to other tabs
-  const broadcastState = useCallback((state: TimerSyncState | null) => {
-    broadcastRef.current?.postMessage({ type: 'timer_state', state });
-  }, []);
+  // ─── 3. POLLING (fallback if Pusher not configured) ──────
 
-  // Core polling function
   const poll = useCallback(async () => {
     const start = Date.now();
     try {
       const res = await fetch('/api/timer');
-      const latency = Date.now() - start;
-
       if (!res.ok) {
         failedCountRef.current++;
-        if (res.status === 401) {
-          setConnectionStatus('offline');
-          return;
-        }
-        setConnectionStatus('syncing');
+        if (res.status === 401) setConnectionStatus('offline');
         return;
       }
-
       const data = await res.json();
-      const newState = data.state as TimerSyncState | null;
-
-      // Check if state actually changed (avoid unnecessary re-renders)
-      const newHash = JSON.stringify(newState);
-      if (newHash !== prevStateHashRef.current) {
-        prevStateHashRef.current = newHash;
-        setTimerState(newState);
-        broadcastState(newState); // Sync to other tabs instantly
-      }
-
-      // Update metrics
-      pollCountRef.current++;
+      const latency = Date.now() - start;
       latencySumRef.current += latency;
-      minutePollCountRef.current++;
+      pollCountRef.current++;
 
-      // Calculate polls per minute
-      const now = Date.now();
-      if (now - minuteStartRef.current >= 60000) {
-        minuteStartRef.current = now;
-        minutePollCountRef.current = 0;
-      }
+      updateState(data.state, 'poll');
 
-      setMetrics({
-        pollCount: pollCountRef.current,
+      setMetrics((prev) => ({
+        ...prev,
         avgLatencyMs: Math.round(latencySumRef.current / pollCountRef.current),
-        lastSyncAt: new Date().toISOString(),
         failedSyncs: failedCountRef.current,
-        activeConnections: 1, // Will be updated by BroadcastChannel pings
-        pollsPerMinute: minutePollCountRef.current,
-      });
-
-      setConnectionStatus('connected');
+        pollCount: pollCountRef.current,
+      }));
     } catch {
       failedCountRef.current++;
       setConnectionStatus('offline');
     }
-  }, [broadcastState]);
+  }, [updateState]);
 
-  // Start polling
   useEffect(() => {
-    poll(); // Initial fetch
-    const interval = setInterval(poll, POLL_INTERVAL);
+    // Always do an initial poll to get state immediately
+    poll();
+
+    // If Pusher is not configured, run continuous polling
+    // If Pusher IS configured, poll less frequently (every 10s) as a safety net
+    const interval = setInterval(poll, pusherReady.current ? 10000 : POLL_INTERVAL);
     return () => clearInterval(interval);
   }, [poll]);
 
-  // Reconnect on visibility change (tab comes back)
+  // Reconnect on tab visibility
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
@@ -179,10 +207,8 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [poll]);
 
-  const forcSync = useCallback(() => { poll(); }, [poll]);
-
   return (
-    <SyncContext.Provider value={{ timerState, connectionStatus, metrics, forcSync }}>
+    <SyncContext.Provider value={{ timerState, connectionStatus, metrics, forcSync: poll }}>
       {children}
     </SyncContext.Provider>
   );

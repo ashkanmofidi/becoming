@@ -91,7 +91,7 @@ export default function SystemHealthPage() {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-surface-500">Method</span>
-              <span className="text-surface-100 font-mono">Polling (2s interval)</span>
+              <span className="text-surface-100 font-mono">{metrics.transport === 'pusher' ? 'Pusher (real-time push)' : 'Polling (2s fallback)'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-surface-500">BroadcastChannel</span>

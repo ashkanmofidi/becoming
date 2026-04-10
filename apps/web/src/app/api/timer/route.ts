@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, rateLimit } from '@/app/api/middleware';
 import { timerService, TimerConflictError, InvalidStateError, StrictModeError } from '@/services/timer.service';
+import { broadcast } from '@/lib/pusher-server';
 
 /**
  * Timer API. PRD Section 5.
@@ -29,72 +30,85 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { action, deviceId, mode, intent, category, newMode } = body;
 
+  // Helper: broadcast state change to all connected devices via Pusher
+  const broadcastTimer = (state: unknown) => {
+    // Fire-and-forget — don't block the API response
+    broadcast(userId, 'timer-update', state as Record<string, unknown>).catch(() => {});
+  };
+
   try {
     switch (action) {
       case 'start': {
-        const state = await timerService.start(
-          userId,
-          mode ?? 'focus',
-          deviceId,
-          intent ?? null,
-          category ?? 'General',
-        );
+        const state = await timerService.start(userId, mode ?? 'focus', deviceId, intent ?? null, category ?? 'General');
+        broadcastTimer(state);
         return NextResponse.json({ state });
       }
 
       case 'pause': {
         const state = await timerService.pause(userId, deviceId);
+        broadcastTimer(state);
         return NextResponse.json({ state });
       }
 
       case 'resume': {
         const state = await timerService.resume(userId, deviceId);
+        broadcastTimer(state);
         return NextResponse.json({ state });
       }
 
       case 'skip': {
         const state = await timerService.skip(userId, deviceId);
+        broadcastTimer(state);
         return NextResponse.json({ state });
       }
 
       case 'reset': {
         const state = await timerService.reset(userId, deviceId);
+        broadcastTimer(state);
         return NextResponse.json({ state });
       }
 
       case 'complete': {
         const { state, session } = await timerService.complete(userId);
+        broadcastTimer(state);
+        broadcast(userId, 'session-logged', { session }).catch(() => {});
         return NextResponse.json({ state, session });
       }
 
       case 'finishEarly': {
         const { state, session } = await timerService.finishEarly(userId, deviceId);
+        broadcastTimer(state);
+        broadcast(userId, 'session-logged', { session }).catch(() => {});
         return NextResponse.json({ state, session });
       }
 
       case 'stopOvertime': {
         const { state, session } = await timerService.stopOvertime(userId, deviceId);
+        broadcastTimer(state);
+        broadcast(userId, 'session-logged', { session }).catch(() => {});
         return NextResponse.json({ state, session });
       }
 
       case 'heartbeat': {
         await timerService.heartbeat(userId, deviceId);
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true }); // No broadcast for heartbeats
       }
 
       case 'takeOver': {
         const state = await timerService.takeOver(userId, deviceId);
+        broadcastTimer(state);
         return NextResponse.json({ state });
       }
 
       case 'switchMode': {
         const state = await timerService.switchMode(userId, newMode, deviceId);
+        broadcastTimer(state);
         return NextResponse.json({ state });
       }
 
       case 'abandon': {
-        // Used by logout and session expiry — logs partial session, clears timer
         await timerService.abandon(userId, 'close');
+        broadcastTimer(null); // Timer cleared
         return NextResponse.json({ success: true });
       }
 
