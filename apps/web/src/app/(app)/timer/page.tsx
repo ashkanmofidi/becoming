@@ -80,7 +80,13 @@ export default function TimerPage() {
     actions,
   } = useTimer({
     showSeconds: settings?.showSeconds ?? true,
-    defaultDurationMinutes: settings?.focusDuration ?? 25,
+    // Pass duration for the CURRENT mode — updates instantly when settings change
+    defaultDurationMinutes: (() => {
+      const mode = syncedTimerState?.mode ?? 'focus';
+      if (mode === 'break') return settings?.shortBreakDuration ?? 5;
+      if (mode === 'long_break') return settings?.longBreakDuration ?? 15;
+      return settings?.focusDuration ?? 25;
+    })(),
     syncedState: syncedTimerState as import('@becoming/shared').TimerState | null | undefined,
     onComplete: () => {
       const mode = state?.mode;

@@ -114,10 +114,10 @@ export function useTimer(options: UseTimerOptions): UseTimerReturn {
         state.pausedAt,
       );
       setRemainingSeconds(remaining);
-    } else if (state) {
-      setRemainingSeconds(state.configuredDuration * 60);
     } else {
-      // No timer state in KV — show the user's configured focus duration
+      // Timer is idle or no state — ALWAYS use the current settings duration,
+      // not the stale state.configuredDuration from KV. This ensures the display
+      // updates immediately when the user changes duration in Settings.
       setRemainingSeconds(options.defaultDurationMinutes * 60);
     }
 
