@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useData } from '@/contexts/DataProvider';
 import {
   BarChart,
   Bar,
@@ -224,28 +225,11 @@ function ComparisonRow({
 /* ---------- Main Page ---------- */
 
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Data prefetched by DataProvider on app init — no loading state needed
+  const { dashboard: data } = useData();
   const [focusRange, setFocusRange] = useState<'7d' | '30d'>('7d');
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const res = await fetch('/api/dashboard');
-        if (!res.ok) throw new Error(`Failed to load dashboard (${res.status})`);
-        const json = await res.json();
-        if (!cancelled) setData(json);
-      } catch (err: unknown) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Something went wrong');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
+  const loading = false; // AppReadyGate ensures data is ready before render
+  const error: string | null = null;
 
   /* --- Loading skeleton --- */
   if (loading) {
@@ -277,7 +261,7 @@ export default function DashboardPage() {
           <p className="text-surface-300 mb-2">Unable to load dashboard</p>
           <p className="text-surface-500 text-sm">{error}</p>
           <button
-            onClick={() => { setError(null); setLoading(true); window.location.reload(); }}
+            onClick={() => { window.location.reload(); }}
             className="mt-4 px-4 py-2 text-sm font-mono bg-amber/10 text-amber rounded-lg hover:bg-amber/20 transition-colors"
           >
             Retry
@@ -289,17 +273,18 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
-  const {
-    stats,
-    focusHoursByDay,
-    focusHours30d,
-    categoryBreakdown,
-    heatmap,
-    topIntents,
-    weeklyComparison,
-  } = data;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const d = data as any;
+  const stats = d.stats ?? {};
+  const focusHoursByDay = d.focusHoursByDay ?? [];
+  const focusHours30d = d.focusHours30d ?? [];
+  const categoryBreakdown = d.categoryBreakdown ?? [];
+  const heatmap = d.heatmap ?? [];
+  const topIntents = d.topIntents ?? [];
+  const weeklyComparison = d.weeklyComparison ?? { thisWeek: {}, lastWeek: {} };
 
-  const focusChartData = (focusRange === '7d' ? focusHoursByDay : focusHours30d).map((d) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const focusChartData = (focusRange === '7d' ? focusHoursByDay : focusHours30d).map((d: any) => ({
     ...d,
     label: shortDate(d.date),
   }));
@@ -308,7 +293,8 @@ export default function DashboardPage() {
 
   /* --- Build 7x4 heatmap grid (rows = weekdays, cols = weeks) --- */
   const heatmapGrid: HeatmapCell[][] = [];
-  const heatmapMap = new Map(heatmap.map((h) => [h.date, h]));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const heatmapMap = new Map(heatmap.map((h: any) => [h.date, h]));
 
   // Build 4 weeks ending today
   const today = new Date();
@@ -323,7 +309,7 @@ export default function DashboardPage() {
       d.setDate(d.getDate() + col * 7 + row);
       const iso = d.toISOString().slice(0, 10);
       const cell = heatmapMap.get(iso);
-      weekRow.push(cell ?? { date: iso, count: 0, level: 0 });
+      weekRow.push((cell ?? { date: iso, count: 0, level: 0 }) as HeatmapCell);
     }
     heatmapGrid.push(weekRow);
   }
@@ -425,7 +411,7 @@ export default function DashboardPage() {
                       outerRadius={44}
                       strokeWidth={0}
                     >
-                      {categoryBreakdown.map((_, i) => (
+                      {categoryBreakdown.map((_: unknown, i: number) => (
                         <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
                       ))}
                     </Pie>

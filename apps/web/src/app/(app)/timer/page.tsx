@@ -22,6 +22,7 @@ import { DailyFocusTime } from '@/components/timer/DailyFocusTime';
 // Tick/ambient fully controlled by AudioSyncProvider at layout level.
 // No direct tick-engine imports needed in this page.
 import { useSettings } from '@/contexts/SettingsContext';
+import { useData } from '@/contexts/DataProvider';
 
 /**
  * Timer page. PRD Section 5.
@@ -43,33 +44,8 @@ export default function TimerPage() {
     variant?: 'default' | 'destructive';
   }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
-  // Session data for daily goal and cycle tracker
-  const [todaySessions, setTodaySessions] = useState<Array<{
-    mode: TimerMode;
-    status: string;
-    deletedAt: string | null;
-    date: string;
-    actualDuration: number;
-  }>>([]);
-
-  // Fetch today's sessions
-  const fetchTodaySessions = useCallback(async () => {
-    try {
-      const res = await fetch('/api/sessions?type=all&limit=100');
-      if (res.ok) {
-        const data = await res.json();
-        setTodaySessions(data.sessions ?? []);
-      }
-    } catch {
-      // Silently retry on next poll
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchTodaySessions();
-    const interval = setInterval(fetchTodaySessions, 30000);
-    return () => clearInterval(interval);
-  }, [fetchTodaySessions]);
+  // Session data from global DataProvider — prefetched on app init, always in memory
+  const { sessions: todaySessions, refreshSessions: fetchTodaySessions, addOptimisticSession } = useData();
 
   // Audio — mute state controls master gain in the engine. No per-call-site checks.
   const audio = useAudio(settings, isMuted);
@@ -106,16 +82,10 @@ export default function TimerPage() {
       // Background fetch confirms the real data afterward.
       if (mode === 'focus' || mode === 'break' || mode === 'long_break') {
         const now = new Date();
-        setTodaySessions((prev) => [
-          ...prev,
-          {
-            mode: mode ?? 'focus',
-            status: 'completed',
-            deletedAt: null,
-            date: now.toISOString().split('T')[0] ?? '',
-            actualDuration: (state?.configuredDuration ?? 1) * 60,
-          },
-        ]);
+        addOptimisticSession({
+          mode: mode ?? 'focus',
+          actualDuration: (state?.configuredDuration ?? 1) * 60,
+        });
       }
 
       // Background fetch to sync with server (corrects any drift)
@@ -266,16 +236,10 @@ export default function TimerPage() {
 
     // Optimistic: add partial session to local state immediately
     if (mode === 'focus') {
-      setTodaySessions((prev) => [
-        ...prev,
-        {
-          mode: 'focus',
-          status: 'completed',
-          deletedAt: null,
-          date: new Date().toISOString().split('T')[0] ?? '',
-          actualDuration: elapsed,
-        },
-      ]);
+      addOptimisticSession({
+        mode: 'focus',
+        actualDuration: elapsed,
+      });
     }
 
     actions.finishEarly();
@@ -394,7 +358,7 @@ export default function TimerPage() {
   // Show skeleton until BOTH timer state AND settings are loaded.
   // Without settings, useTimer gets the wrong default duration (25 instead of user's saved value).
   // This prevents the "flash of 25:00" before the real duration appears.
-  if (isLoading || !settings) {
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
         <div className="w-[280px] h-[280px] rounded-full bg-surface-900/50 animate-pulse" />
