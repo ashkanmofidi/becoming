@@ -9,9 +9,6 @@ import type { UserSettings } from '@becoming/shared';
  * GET: Fetch current settings
  * PUT: Save settings — MUST go through settingsService.saveSettings()
  *      which runs validateAndEnforce() (feature interactions, bounds clamping).
- *      BUG FIX: was calling settingsRepo.save() directly, bypassing validation.
- *      This caused minCountableSession to stay at 10 when focusDuration was set to 1,
- *      silently discarding all 1-minute sessions.
  */
 export async function GET(request: NextRequest) {
   const rateLimited = rateLimit(request);

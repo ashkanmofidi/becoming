@@ -14,20 +14,17 @@ export interface DailyGoalStatus {
 /**
  * Calculates daily goal status.
  * PRD: Only completed FOCUS sessions count toward goal.
- * PRD: Sessions under minCountableSession are excluded.
  */
 export function getDailyGoalStatus(
   sessions: SessionRecord[],
   dailyGoal: number,
   today: string,
-  minCountableMinutes: number,
 ): DailyGoalStatus {
   const completed = sessions.filter(
     (s) =>
       s.date === today &&
       s.status === 'completed' &&
       s.mode === 'focus' &&
-      s.actualDuration >= minCountableMinutes * 60 &&
       s.deletedAt === null,
   ).length;
 
@@ -48,7 +45,6 @@ export function getWeeklyGoalStatus(
   weeklyGoalTarget: number,
   weekStart: string,
   weekEnd: string,
-  minCountableMinutes: number,
 ): { completed: number; target: number; met: boolean } {
   const completed = sessions.filter(
     (s) =>
@@ -56,7 +52,6 @@ export function getWeeklyGoalStatus(
       s.date <= weekEnd &&
       s.status === 'completed' &&
       s.mode === 'focus' &&
-      s.actualDuration >= minCountableMinutes * 60 &&
       s.deletedAt === null,
   ).length;
 

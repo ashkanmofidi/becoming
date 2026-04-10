@@ -5,7 +5,6 @@ export interface UserSettings {
   shortBreakDuration: number;
   longBreakDuration: number;
   cycleCount: number;
-  minCountableSession: number;
   overtimeAllowance: boolean;
 
   // Behavior (Section 6.2)

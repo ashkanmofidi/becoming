@@ -9,7 +9,6 @@ describe('createDefaultSettings', () => {
     expect(settings.shortBreakDuration).toBe(5);
     expect(settings.longBreakDuration).toBe(15);
     expect(settings.cycleCount).toBe(4);
-    expect(settings.minCountableSession).toBe(10);
     expect(settings.overtimeAllowance).toBe(false);
   });
 

@@ -16,7 +16,6 @@ export function createDefaultSettings(): UserSettings {
     shortBreakDuration: TIMER_DEFAULTS.SHORT_BREAK_DURATION,
     longBreakDuration: TIMER_DEFAULTS.LONG_BREAK_DURATION,
     cycleCount: TIMER_DEFAULTS.CYCLE_COUNT,
-    minCountableSession: TIMER_DEFAULTS.MIN_COUNTABLE_SESSION,
     overtimeAllowance: TIMER_DEFAULTS.OVERTIME_ALLOWANCE,
     autoStartBreaks: BEHAVIOR_DEFAULTS.AUTO_START_BREAKS,
     autoStartFocus: BEHAVIOR_DEFAULTS.AUTO_START_FOCUS,

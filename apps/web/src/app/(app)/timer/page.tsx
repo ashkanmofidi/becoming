@@ -316,7 +316,6 @@ export default function TimerPage() {
     todaySessions as Parameters<typeof getDailyGoalStatus>[0],
     settings?.dailyGoal ?? 4,
     new Date().toISOString().split('T')[0] ?? '',
-    settings?.minCountableSession ?? 10,
   );
 
   const cycleStatus = getCycleStatus(

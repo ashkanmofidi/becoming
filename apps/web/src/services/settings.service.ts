@@ -17,7 +17,6 @@ export const settingsService = {
   async getSettings(userId: string): Promise<UserSettings> {
     const settings = await settingsRepo.get(userId);
     // Always validate on read — catches stale data with broken invariants
-    // (e.g., minCountableSession=10 but focusDuration=1 from before the fix)
     return this.validateAndEnforce(settings);
   },
 
@@ -56,19 +55,11 @@ export const settingsService = {
     s.shortBreakDuration = validateStepperValue(s.shortBreakDuration, LIMITS.SHORT_BREAK_MIN, LIMITS.SHORT_BREAK_MAX);
     s.longBreakDuration = validateStepperValue(s.longBreakDuration, LIMITS.LONG_BREAK_MIN, LIMITS.LONG_BREAK_MAX);
     s.cycleCount = validateStepperValue(s.cycleCount, LIMITS.CYCLE_MIN, LIMITS.CYCLE_MAX);
-    s.minCountableSession = validateStepperValue(s.minCountableSession, LIMITS.MIN_COUNTABLE_MIN, LIMITS.MIN_COUNTABLE_MAX);
     s.dailyGoal = validateStepperValue(s.dailyGoal, LIMITS.DAILY_GOAL_MIN, LIMITS.DAILY_GOAL_MAX);
     s.streakFreezePerMonth = validateStepperValue(s.streakFreezePerMonth, LIMITS.STREAK_FREEZE_MIN, LIMITS.STREAK_FREEZE_MAX);
     s.masterVolume = validateStepperValue(s.masterVolume, 0, 100);
     s.ambientVolume = validateStepperValue(s.ambientVolume, 0, 100);
     s.idleReminderDelay = validateStepperValue(s.idleReminderDelay, 5, 60);
-
-    // FEATURE INTERACTION: focusDuration < minCountableSession
-    // If user sets focus to 1 min but min countable is 10, their sessions silently vanish.
-    // Auto-adjust: minCountableSession can never exceed focusDuration.
-    if (s.minCountableSession > s.focusDuration) {
-      s.minCountableSession = s.focusDuration;
-    }
 
     // Weekly goal (PRD 6.8)
     if (s.weeklyGoalEnabled) {

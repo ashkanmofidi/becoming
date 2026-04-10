@@ -29,7 +29,7 @@ function makeSession(overrides: Partial<SessionRecord> = {}): SessionRecord {
 
 describe('getDailyGoalStatus', () => {
   it('returns 0 completed for no sessions', () => {
-    const result = getDailyGoalStatus([], 4, '2026-04-08', 10);
+    const result = getDailyGoalStatus([], 4, '2026-04-08');
     expect(result.completed).toBe(0);
     expect(result.target).toBe(4);
     expect(result.met).toBe(false);
@@ -48,41 +48,25 @@ describe('getDailyGoalStatus', () => {
         date: '2026-04-07',
       }), // different day
     ];
-    const result = getDailyGoalStatus(sessions, 4, '2026-04-08', 10);
+    const result = getDailyGoalStatus(sessions, 4, '2026-04-08');
     expect(result.completed).toBe(2);
   });
 
-  it('excludes sessions under min countable duration', () => {
-    // PRD 6.1: Sessions shorter than min countable are not counted
+  it('counts ALL completed sessions regardless of duration (no min threshold)', () => {
     const sessions = [
-      makeSession({ actualDuration: 1500 }), // 25 min - counts
-      makeSession({ actualDuration: 300 }), // 5 min - below 10 min threshold (600s)
+      makeSession({ actualDuration: 1500 }), // 25 min
+      makeSession({ actualDuration: 300 }), // 5 min
+      makeSession({ actualDuration: 5 }), // 5 seconds
     ];
-    const result = getDailyGoalStatus(sessions, 4, '2026-04-08', 10);
-    expect(result.completed).toBe(1);
-  });
-
-  it('includes sessions at exactly the min countable threshold', () => {
-    const sessions = [
-      makeSession({ actualDuration: 600 }), // exactly 10 min = threshold
-    ];
-    const result = getDailyGoalStatus(sessions, 4, '2026-04-08', 10);
-    expect(result.completed).toBe(1);
-  });
-
-  it('excludes sessions 1 second below the min countable threshold', () => {
-    const sessions = [
-      makeSession({ actualDuration: 599 }), // 9:59 - just under
-    ];
-    const result = getDailyGoalStatus(sessions, 4, '2026-04-08', 10);
-    expect(result.completed).toBe(0);
+    const result = getDailyGoalStatus(sessions, 4, '2026-04-08');
+    expect(result.completed).toBe(3); // All count, no minimum
   });
 
   it('detects goal met', () => {
     const sessions = Array(4)
       .fill(null)
       .map(() => makeSession());
-    const result = getDailyGoalStatus(sessions, 4, '2026-04-08', 10);
+    const result = getDailyGoalStatus(sessions, 4, '2026-04-08');
     expect(result.met).toBe(true);
     expect(result.exceeded).toBe(false);
   });
@@ -91,7 +75,7 @@ describe('getDailyGoalStatus', () => {
     const sessions = Array(6)
       .fill(null)
       .map(() => makeSession());
-    const result = getDailyGoalStatus(sessions, 4, '2026-04-08', 10);
+    const result = getDailyGoalStatus(sessions, 4, '2026-04-08');
     expect(result.completed).toBe(6);
     expect(result.met).toBe(true);
     expect(result.exceeded).toBe(true);
@@ -102,13 +86,13 @@ describe('getDailyGoalStatus', () => {
       makeSession({ deletedAt: null }),
       makeSession({ deletedAt: '2026-04-08T12:00:00Z' }),
     ];
-    const result = getDailyGoalStatus(sessions, 4, '2026-04-08', 10);
+    const result = getDailyGoalStatus(sessions, 4, '2026-04-08');
     expect(result.completed).toBe(1);
   });
 
   it('handles goal of 1 (minimum)', () => {
     const sessions = [makeSession()];
-    const result = getDailyGoalStatus(sessions, 1, '2026-04-08', 10);
+    const result = getDailyGoalStatus(sessions, 1, '2026-04-08');
     expect(result.met).toBe(true);
     expect(result.exceeded).toBe(false);
   });
@@ -117,21 +101,21 @@ describe('getDailyGoalStatus', () => {
     const sessions = Array(20)
       .fill(null)
       .map(() => makeSession());
-    const result = getDailyGoalStatus(sessions, 20, '2026-04-08', 10);
+    const result = getDailyGoalStatus(sessions, 20, '2026-04-08');
     expect(result.met).toBe(true);
     expect(result.exceeded).toBe(false);
   });
 
   it('does not count long_break sessions', () => {
     const sessions = [makeSession({ mode: 'long_break' })];
-    const result = getDailyGoalStatus(sessions, 4, '2026-04-08', 10);
+    const result = getDailyGoalStatus(sessions, 4, '2026-04-08');
     expect(result.completed).toBe(0);
   });
 });
 
 describe('getWeeklyGoalStatus', () => {
   it('returns 0 for no sessions in the week', () => {
-    const result = getWeeklyGoalStatus([], 20, '2026-04-06', '2026-04-12', 10);
+    const result = getWeeklyGoalStatus([], 20, '2026-04-06', '2026-04-12');
     expect(result.completed).toBe(0);
     expect(result.target).toBe(20);
     expect(result.met).toBe(false);
@@ -200,19 +184,19 @@ describe('getWeeklyGoalStatus', () => {
     expect(result.met).toBe(true);
   });
 
-  it('excludes sessions under min countable duration', () => {
+  it('counts ALL sessions regardless of duration (no min threshold)', () => {
     const sessions = [
       makeSession({ date: '2026-04-08', actualDuration: 1500 }),
       makeSession({ date: '2026-04-08', actualDuration: 300 }),
+      makeSession({ date: '2026-04-08', actualDuration: 5 }),
     ];
     const result = getWeeklyGoalStatus(
       sessions,
       20,
       '2026-04-06',
       '2026-04-12',
-      10,
     );
-    expect(result.completed).toBe(1);
+    expect(result.completed).toBe(3);
   });
 });
 

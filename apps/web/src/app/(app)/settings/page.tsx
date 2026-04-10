@@ -53,7 +53,6 @@ export default function SettingsPage() {
           <Stepper label="Short Break" subtitle="Minutes per short break" value={settings.shortBreakDuration} onChange={(v) => update('shortBreakDuration', v)} min={LIMITS.SHORT_BREAK_MIN} max={LIMITS.SHORT_BREAK_MAX} suffix=" min" />
           <Stepper label="Long Break" subtitle="Minutes per long break" value={settings.longBreakDuration} onChange={(v) => update('longBreakDuration', v)} min={LIMITS.LONG_BREAK_MIN} max={LIMITS.LONG_BREAK_MAX} suffix=" min" />
           <Stepper label="Cycles" subtitle="Sessions before long break" value={settings.cycleCount} onChange={(v) => update('cycleCount', v)} min={LIMITS.CYCLE_MIN} max={LIMITS.CYCLE_MAX} />
-          <Stepper label="Minimum Countable Session" subtitle={`Sessions shorter than this are not logged. Cannot exceed focus duration (${settings.focusDuration} min).`} value={Math.min(settings.minCountableSession, settings.focusDuration)} onChange={(v) => update('minCountableSession', v)} min={LIMITS.MIN_COUNTABLE_MIN} max={Math.min(LIMITS.MIN_COUNTABLE_MAX, settings.focusDuration)} suffix=" min" />
           <Toggle label="Overtime Allowance" description="Timer counts up after 00:00" enabled={settings.overtimeAllowance} onChange={(v) => update('overtimeAllowance', v)} />
         </SettingsCard>
 

@@ -402,7 +402,7 @@ export const timerService = {
   async finalizeSession(
     userId: string,
     state: TimerState,
-    settings: { minCountableSession: number; autoLogSessions: boolean },
+    settings: { autoLogSessions: boolean },
   ): Promise<SessionRecord | null> {
     if (!state.startedAt) return null;
 
@@ -412,22 +412,6 @@ export const timerService = {
     const overtimeSeconds = state.overtimeStartedAt
       ? Math.floor((now.getTime() - new Date(state.overtimeStartedAt).getTime()) / 1000)
       : 0;
-
-    // PRD 6.1: Sessions under min countable are not logged.
-    // Invariant: minCountableSession can never exceed the configured duration for this session.
-    // This catches stale settings where minCountable=10 but focus=1.
-    const effectiveMinCountable = Math.min(
-      settings.minCountableSession,
-      state.configuredDuration, // in minutes
-    );
-    if (actualDurationSeconds < effectiveMinCountable * 60) {
-      logger.info('Session too short, not logged', {
-        userId,
-        duration: actualDurationSeconds,
-        minCountable: effectiveMinCountable,
-      });
-      return null;
-    }
 
     const session: SessionRecord = {
       id: `ses_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,

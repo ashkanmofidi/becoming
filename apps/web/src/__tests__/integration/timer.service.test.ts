@@ -58,7 +58,6 @@ const mockSettings = {
   shortBreakDuration: 5,
   longBreakDuration: 15,
   cycleCount: 4,
-  minCountableSession: 10,
   overtimeAllowance: false,
   strictMode: false,
   autoLogSessions: true,
@@ -303,16 +302,6 @@ describe('timerService integration', () => {
       expect(session!.actualDuration).toBe(25 * 60); // 1500 seconds
       expect(session!.overtimeDuration).toBe(0);
       expect(session!.userId).toBe(USER_ID);
-    });
-
-    it('does not log session shorter than minCountableSession', async () => {
-      await startFocusTimer();
-
-      // Only 5 minutes elapsed (less than 10 min minimum)
-      vi.setSystemTime(new Date('2026-04-07T10:05:00.000Z'));
-      const { session } = await timerService.complete(USER_ID);
-
-      expect(session).toBeNull();
     });
 
     it('advances to long_break after cycleCount focus sessions', async () => {

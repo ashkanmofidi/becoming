@@ -66,9 +66,6 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         updated.completionAnimationIntensity = 'subtle';
         if (updated.clockFont === 'flip') updated.clockFont = 'minimal';
       }
-      if (partial.focusDuration !== undefined && updated.minCountableSession > partial.focusDuration) {
-        updated.minCountableSession = partial.focusDuration;
-      }
 
       // Save to server in background (debounced)
       saveToServer(updated);
