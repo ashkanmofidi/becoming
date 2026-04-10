@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { ConnectionIndicator } from './ConnectionIndicator';
+import { useData } from '@/contexts/DataProvider';
 import { usePathname } from 'next/navigation';
 import type { UserRole } from '@becoming/shared';
 
@@ -159,20 +160,8 @@ export function Sidebar({ userName, userEmail, userPicture, userRole, confirmLog
         )}
       </nav>
 
-      {/* Footer: connection indicator + stats */}
-      <div className="pt-3 border-t border-surface-900 mt-4 space-y-3">
-        <ConnectionIndicator />
-        <div className="grid grid-cols-2 gap-2 text-center">
-          <div>
-            <p className="text-amber font-mono text-sm font-semibold">—</p>
-            <p className="text-surface-500 text-[9px] uppercase tracking-wider">Today</p>
-          </div>
-          <div>
-            <p className="text-amber font-mono text-sm font-semibold">—</p>
-            <p className="text-surface-500 text-[9px] uppercase tracking-wider">Streak</p>
-          </div>
-        </div>
-      </div>
+      {/* Footer: connection indicator + live stats */}
+      <SidebarStats />
 
       {/* Logout confirmation modal — shown when timer is active */}
       {showLogoutConfirm && (
@@ -231,6 +220,73 @@ export function Sidebar({ userName, userEmail, userPicture, userRole, confirmLog
         </div>
       )}
     </aside>
+  );
+}
+
+/**
+ * Sidebar footer stats — TODAY count + STREAK.
+ * Reads from DataProvider (global, reactive across all pages).
+ */
+function SidebarStats() {
+  const { sessions } = useData();
+
+  const { todayCount, streak } = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0] ?? '';
+
+    // TODAY: completed focus sessions today
+    const todayFocus = sessions.filter(
+      (s) => s.date === today && s.mode === 'focus' && s.status === 'completed' && !s.deletedAt,
+    );
+
+    // STREAK: consecutive days with at least 1 completed focus session
+    let streakCount = 0;
+    const date = new Date();
+
+    // Check today first
+    const todayHasSessions = todayFocus.length > 0;
+    if (todayHasSessions) streakCount = 1;
+
+    // Walk backwards from yesterday
+    const startDay = todayHasSessions ? 1 : 0; // If today has sessions, start checking from yesterday
+    if (!todayHasSessions) {
+      // Check if we should start from today (no sessions yet today, streak from yesterday)
+    }
+
+    for (let i = startDay; i < 365; i++) {
+      const d = new Date(date);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0] ?? '';
+
+      if (i === 0 && todayHasSessions) continue; // Already counted today
+
+      const dayHasFocus = sessions.some(
+        (s) => s.date === dateStr && s.mode === 'focus' && s.status === 'completed' && !s.deletedAt,
+      );
+
+      if (dayHasFocus) {
+        streakCount++;
+      } else {
+        break; // Streak broken
+      }
+    }
+
+    return { todayCount: todayFocus.length, streak: streakCount };
+  }, [sessions]);
+
+  return (
+    <div className="pt-3 border-t border-surface-900 mt-4 space-y-3">
+      <ConnectionIndicator />
+      <div className="grid grid-cols-2 gap-2 text-center">
+        <div>
+          <p className="text-amber font-mono text-sm font-semibold">{todayCount}</p>
+          <p className="text-surface-500 text-[9px] uppercase tracking-wider">Today</p>
+        </div>
+        <div>
+          <p className="text-amber font-mono text-sm font-semibold">{streak}</p>
+          <p className="text-surface-500 text-[9px] uppercase tracking-wider">Streak</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
