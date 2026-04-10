@@ -1,5 +1,23 @@
 # Changelog
 
+## v3.2.0 (2026-04-07) - Security Audit & Hardening
+
+### Added
+- **Data Guardian rule**: Settings repo merges with existing data, never overwrites. Enforced via CLAUDE.md Rule 0.
+- **Full audit report**: Comprehensive security and reliability audit documented in `docs/AUDIT_REPORT.md`.
+- **Runtime input validation**: All API endpoints validate and sanitize incoming payloads.
+- **Payload size limits**: Request body size caps on API routes to prevent abuse.
+- **API documentation**: Complete API reference in `docs/API.md`.
+- **Font preloading**: Critical fonts preloaded in document head to eliminate FOIT/FOUT.
+- **Monitoring setup guide**: Step-by-step Sentry and UptimeRobot setup in `docs/MONITORING_SETUP.md`.
+- **Backup guide**: KV data backup, automation, and recovery procedures in `docs/BACKUP_GUIDE.md`.
+
+### Changed
+- **Source maps disabled in production**: `productionBrowserSourceMaps` set to `false` in next.config to prevent code exposure.
+- **Stack traces removed from error responses**: API error handlers return generic messages; details logged server-side only.
+- **Audio engine cleanup**: Ambient sound nodes properly disconnected and released after fade-out to prevent memory leaks.
+- **CI pipeline expanded**: Shared package type-check, unit tests, and web app build added to CI workflow.
+
 ## v3.1.19 (2026-04-09) - Complete Feedback System
 
 ### Added

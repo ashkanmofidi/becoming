@@ -4,6 +4,12 @@
  * All sounds are OGG files in /public/sounds/, loaded via fetch + decodeAudioData.
  * Buffers are cached after first load.
  *
+ * Buffer cache lifecycle: AudioBuffers are stored in S.buffers (Map) for the
+ * lifetime of the engine. They are only cleared when destroyAudioEngine() is
+ * called. This is intentional — decoded audio buffers are expensive to create
+ * and the total set is small (< 10 files, ~2-5 MB). Individual source nodes
+ * are disconnected and released in stopAmbientSound() after fade-out.
+ *
  * Ambient sounds use AudioBufferSourceNode.loop = true for gapless looping.
  * Event sounds (chimes) play once and auto-dispose.
  */
@@ -193,10 +199,17 @@ export function stopAmbientSound(): void {
     S.ambientGain.gain.setTargetAtTime(0, S.ctx.currentTime, 0.15);
   }
   const src = S.ambientSource;
+  const gain = S.ambientGain;
   setTimeout(() => {
     try { src?.stop(); } catch { /* already stopped */ }
+    // P2-8: Disconnect and release nodes to free audio buffers.
+    // Without this, stopped source nodes remain connected to the audio graph
+    // and hold references to their underlying AudioBuffer, preventing GC.
+    try { src?.disconnect(); } catch { /* already disconnected */ }
+    try { gain?.disconnect(); } catch { /* already disconnected */ }
   }, 800);
   S.ambientSource = null;
+  S.ambientGain = null;
   S.ambientType = 'none';
 }
 

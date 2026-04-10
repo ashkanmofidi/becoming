@@ -14,9 +14,27 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: Type Check
+
+      # ── Shared package ──────────────────────────────
+      - name: "Shared: Type Check"
         run: npx tsc --noEmit
         working-directory: packages/shared
-      - name: Lint
-        run: npx eslint packages/shared/src/ --ext .ts --max-warnings 0
+
+      - name: "Shared: Unit Tests"
+        run: npx vitest run
+        working-directory: packages/shared
+
+      - name: "Shared: Lint"
+        run: npx eslint src/ --ext .ts --max-warnings 0
+        working-directory: packages/shared
         continue-on-error: true
+
+      # ── Web app ─────────────────────────────────────
+      - name: "Web: Build"
+        run: npx next build
+        working-directory: apps/web
+
+      # TODO: Add E2E tests (Playwright) once configured in CI.
+      # Will need a `playwright install --with-deps` step and
+      # a running dev/preview server. See:
+      # https://playwright.dev/docs/ci-intro
