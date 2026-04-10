@@ -134,7 +134,6 @@ describe('getWeeklyGoalStatus', () => {
       20,
       '2026-04-06',
       '2026-04-12',
-      10,
     );
     expect(result.completed).toBe(3);
   });
@@ -150,7 +149,6 @@ describe('getWeeklyGoalStatus', () => {
       20,
       '2026-04-06',
       '2026-04-12',
-      10,
     );
     expect(result.completed).toBe(1);
   });
@@ -165,7 +163,6 @@ describe('getWeeklyGoalStatus', () => {
       20,
       '2026-04-06',
       '2026-04-12',
-      10,
     );
     expect(result.completed).toBe(1);
   });
@@ -179,7 +176,6 @@ describe('getWeeklyGoalStatus', () => {
       20,
       '2026-04-06',
       '2026-04-12',
-      10,
     );
     expect(result.met).toBe(true);
   });

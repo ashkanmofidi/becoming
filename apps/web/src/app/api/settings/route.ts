@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, rateLimit } from '@/app/api/middleware';
+import { requireAuth, rateLimit, checkPayloadSize } from '@/app/api/middleware';
 import { settingsService } from '@/services/settings.service';
 import { broadcast } from '@/lib/pusher-server';
 import type { UserSettings } from '@becoming/shared';
@@ -22,6 +22,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const payloadCheck = checkPayloadSize(request, 32768); // 32KB max for settings
+  if (payloadCheck) return payloadCheck;
+
   const rateLimited = rateLimit(request);
   if (rateLimited) return rateLimited;
 
@@ -35,13 +38,25 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'settings must be a non-null object' }, { status: 400 });
   }
 
-  // Runtime bounds validation (P2-1)
+  // Runtime bounds validation
   if ('focusDuration' in settings) {
     if (typeof settings.focusDuration !== 'number' || settings.focusDuration < 1 || settings.focusDuration > 120) {
-      return NextResponse.json(
-        { error: 'focusDuration must be a number between 1 and 120' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'focusDuration must be between 1 and 120' }, { status: 400 });
+    }
+  }
+  if ('shortBreakDuration' in settings) {
+    if (typeof settings.shortBreakDuration !== 'number' || settings.shortBreakDuration < 1 || settings.shortBreakDuration > 60) {
+      return NextResponse.json({ error: 'shortBreakDuration must be between 1 and 60' }, { status: 400 });
+    }
+  }
+  if ('longBreakDuration' in settings) {
+    if (typeof settings.longBreakDuration !== 'number' || settings.longBreakDuration < 1 || settings.longBreakDuration > 60) {
+      return NextResponse.json({ error: 'longBreakDuration must be between 1 and 60' }, { status: 400 });
+    }
+  }
+  if ('dailyGoal' in settings) {
+    if (typeof settings.dailyGoal !== 'number' || settings.dailyGoal < 1 || settings.dailyGoal > 20) {
+      return NextResponse.json({ error: 'dailyGoal must be between 1 and 20' }, { status: 400 });
     }
   }
 

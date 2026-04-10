@@ -7,6 +7,7 @@ import { LIMITS } from '@becoming/shared';
 interface SettingsContextValue {
   settings: UserSettings | null;
   isLoaded: boolean;
+  saveError: string | null;
   /** Update one or more settings. Applies instantly in UI, saves to server in background. */
   updateSettings: (partial: Partial<UserSettings>) => void;
 }
@@ -14,6 +15,7 @@ interface SettingsContextValue {
 const SettingsContext = createContext<SettingsContextValue>({
   settings: null,
   isLoaded: false,
+  saveError: null,
   updateSettings: () => {},
 });
 
@@ -31,28 +33,43 @@ const SettingsContext = createContext<SettingsContextValue>({
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch settings once on mount
   useEffect(() => {
-    fetch('/api/settings')
+    const controller = new AbortController();
+    fetch('/api/settings', { signal: controller.signal })
       .then((res) => res.ok ? res.json() : null)
       .then((data) => {
         if (data?.settings) setSettings(data.settings);
       })
       .catch(() => {})
       .finally(() => setIsLoaded(true));
+    return () => controller.abort();
+  }, []);
+
+  // Cleanup debounce timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
   }, []);
 
   // Background save with debounce
   const saveToServer = useCallback((updated: UserSettings) => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    setSaveError(null);
     saveTimeoutRef.current = setTimeout(() => {
       fetch('/api/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ settings: updated }),
-      }).catch(() => {});
+      }).then((res) => {
+        if (!res.ok) setSaveError('Failed to save settings');
+      }).catch(() => {
+        setSaveError('Network error saving settings');
+      });
     }, LIMITS.SETTINGS_DEBOUNCE_MS);
   }, []);
 
@@ -75,7 +92,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   }, [saveToServer]);
 
   return (
-    <SettingsContext.Provider value={{ settings, isLoaded, updateSettings }}>
+    <SettingsContext.Provider value={{ settings, isLoaded, saveError, updateSettings }}>
       {children}
     </SettingsContext.Provider>
   );

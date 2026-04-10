@@ -17,14 +17,16 @@ export async function GET(request: NextRequest) {
   if (result instanceof NextResponse) return result;
 
   const { searchParams } = request.nextUrl;
-  const type = searchParams.get('type') as TimerMode | 'all' | null;
+  const typeParam = searchParams.get('type');
+  const validTypes = ['focus', 'break', 'long_break', 'all'];
+  const type = (typeParam && validTypes.includes(typeParam) ? typeParam : 'all') as TimerMode | 'all';
   const dateFrom = searchParams.get('dateFrom');
   const dateTo = searchParams.get('dateTo');
   const categories = searchParams.get('categories')?.split(',').filter(Boolean);
   const search = searchParams.get('search');
   const showAbandoned = searchParams.get('showAbandoned') === 'true';
-  const offset = parseInt(searchParams.get('offset') ?? '0', 10);
-  const limit = parseInt(searchParams.get('limit') ?? '50', 10);
+  const offset = Math.max(0, parseInt(searchParams.get('offset') ?? '0', 10) || 0);
+  const limit = Math.min(500, Math.max(1, parseInt(searchParams.get('limit') ?? '50', 10) || 50));
   const format = searchParams.get('format');
 
   const { sessions, total } = await sessionService.getSessions(
@@ -73,8 +75,17 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json();
   const { sessionId, intent, category, notes } = body;
 
-  if (!sessionId) {
+  if (!sessionId || typeof sessionId !== 'string') {
     return NextResponse.json({ error: 'sessionId required' }, { status: 400 });
+  }
+  if (intent !== undefined && intent !== null && (typeof intent !== 'string' || intent.length > 500)) {
+    return NextResponse.json({ error: 'Invalid intent' }, { status: 400 });
+  }
+  if (category !== undefined && (typeof category !== 'string' || category.length > 100)) {
+    return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
+  }
+  if (notes !== undefined && notes !== null && (typeof notes !== 'string' || notes.length > 5000)) {
+    return NextResponse.json({ error: 'Invalid notes' }, { status: 400 });
   }
 
   const session = await sessionService.updateSession(

@@ -52,11 +52,23 @@ export async function POST(request: NextRequest) {
   const result = await requireRole(request, 'super_admin');
   if (result instanceof NextResponse) return result;
 
+  try {
   const body = await request.json();
   const { action } = body;
 
+  if (!action || typeof action !== 'string') {
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  }
+
   switch (action) {
     case 'changeRole': {
+      if (!body.targetUserId || typeof body.targetUserId !== 'string') {
+        return NextResponse.json({ error: 'Invalid targetUserId' }, { status: 400 });
+      }
+      const validRoles = ['user', 'admin', 'super_admin'];
+      if (!body.newRole || !validRoles.includes(body.newRole)) {
+        return NextResponse.json({ error: 'Invalid newRole' }, { status: 400 });
+      }
       await adminService.changeRole(
         result.session.userId,
         result.session.email,
@@ -66,6 +78,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
     case 'updateFeedbackStatus': {
+      if (!body.feedbackId || typeof body.feedbackId !== 'string') {
+        return NextResponse.json({ error: 'Invalid feedbackId' }, { status: 400 });
+      }
+      const validStatuses = ['new', 'acknowledged', 'in_progress', 'resolved', 'closed'];
+      if (!body.status || !validStatuses.includes(body.status)) {
+        return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+      }
       await adminService.updateFeedbackStatus(
         body.feedbackId,
         body.status,
@@ -76,5 +95,13 @@ export async function POST(request: NextRequest) {
     }
     default:
       return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+  }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('Admin POST error:', message, err instanceof Error ? err.stack : '');
+    return NextResponse.json(
+      { error: 'An error occurred. Please try again.' },
+      { status: 500 },
+    );
   }
 }

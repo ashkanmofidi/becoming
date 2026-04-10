@@ -36,10 +36,16 @@ export function useWakeLock(enabled: boolean) {
     }
   }, [enabled]);
 
-  const release = useCallback(() => {
-    wakeLockRef.current?.release();
+  const release = useCallback(async () => {
+    try {
+      await wakeLockRef.current?.release();
+    } catch { /* already released */ }
     wakeLockRef.current = null;
-    fallbackAudioRef.current?.pause();
+    if (fallbackAudioRef.current) {
+      fallbackAudioRef.current.pause();
+      fallbackAudioRef.current.src = '';
+      fallbackAudioRef.current = null;
+    }
   }, []);
 
   // Re-acquire on visibility change

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth, rateLimit } from '@/app/api/middleware';
+import { requireAuth, rateLimit, checkPayloadSize } from '@/app/api/middleware';
 import { timerService, TimerConflictError, InvalidStateError, StrictModeError } from '@/services/timer.service';
 import { broadcast } from '@/lib/pusher-server';
+
+const VALID_ACTIONS = ['start', 'pause', 'resume', 'skip', 'reset', 'complete', 'finishEarly', 'stopOvertime', 'heartbeat', 'takeOver', 'switchMode', 'abandon'] as const;
+const VALID_MODES = ['focus', 'break', 'long_break'] as const;
 
 /**
  * Timer API. PRD Section 5.
@@ -20,6 +23,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const payloadCheck = checkPayloadSize(request, 8192); // 8KB max for timer actions
+  if (payloadCheck) return payloadCheck;
+
   const rateLimited = rateLimit(request);
   if (rateLimited) return rateLimited;
 
@@ -29,6 +35,34 @@ export async function POST(request: NextRequest) {
   const { userId } = result.session;
   const body = await request.json();
   const { action, deviceId, mode, intent, category, newMode } = body;
+
+  // Validate action
+  if (!action || typeof action !== 'string' || !VALID_ACTIONS.includes(action as typeof VALID_ACTIONS[number])) {
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  }
+
+  // Validate deviceId for actions that require it
+  if (action !== 'complete' && action !== 'abandon') {
+    if (!deviceId || typeof deviceId !== 'string' || deviceId.length > 100) {
+      return NextResponse.json({ error: 'Invalid deviceId' }, { status: 400 });
+    }
+  }
+
+  // Validate mode for start and switchMode
+  if ((action === 'start' || action === 'switchMode') && mode !== undefined && !VALID_MODES.includes(mode)) {
+    return NextResponse.json({ error: 'Invalid mode' }, { status: 400 });
+  }
+  if (action === 'switchMode' && newMode !== undefined && !VALID_MODES.includes(newMode)) {
+    return NextResponse.json({ error: 'Invalid newMode' }, { status: 400 });
+  }
+
+  // Validate string fields
+  if (intent !== undefined && intent !== null && (typeof intent !== 'string' || intent.length > 500)) {
+    return NextResponse.json({ error: 'Invalid intent' }, { status: 400 });
+  }
+  if (category !== undefined && (typeof category !== 'string' || category.length > 100)) {
+    return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
+  }
 
   // Helper: broadcast state change to all connected devices via Pusher
   const broadcastTimer = (state: unknown) => {
@@ -115,16 +149,17 @@ export async function POST(request: NextRequest) {
       default:
         return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
     }
-  } catch (error) {
-    if (error instanceof TimerConflictError) {
-      return NextResponse.json({ error: error.message }, { status: 409 });
+  } catch (e) {
+    const err = e as Error;
+    if (err instanceof TimerConflictError) {
+      return NextResponse.json({ error: err.message }, { status: 409 });
     }
-    if (error instanceof InvalidStateError) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+    if (err instanceof InvalidStateError) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
     }
-    if (error instanceof StrictModeError) {
-      return NextResponse.json({ error: error.message }, { status: 403 });
+    if (err instanceof StrictModeError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
     }
-    throw error;
+    throw e;
   }
 }

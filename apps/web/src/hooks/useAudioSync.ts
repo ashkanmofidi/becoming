@@ -38,9 +38,15 @@ export function useAudioSync() {
     initializedRef.current = true;
   }, [settings]);
 
+  // Use ref for syncAudio to break circular deps. The function reads settings
+  // from the ref (always current), so it doesn't need to be in any dep array.
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+
   // The core sync function — evaluates all audio state and applies it
   const syncAudio = useCallback(() => {
-    if (!settings || !initializedRef.current) return;
+    const s = settingsRef.current;
+    if (!s || !initializedRef.current) return;
 
     const ts = timerStateRef.current;
     const isRunning = ts?.status === 'running';
@@ -48,20 +54,20 @@ export function useAudioSync() {
     const isBreak = ts?.mode === 'break' || ts?.mode === 'long_break';
 
     // Mute
-    setEngineMuted(settings.muted);
-    setTickMuted(settings.muted);
+    setEngineMuted(s.muted);
+    setTickMuted(s.muted);
 
     // Theme
-    setEngineTheme(settings.soundTheme);
+    setEngineTheme(s.soundTheme);
 
     // Volume
-    setEngineVolume(settings.masterVolume);
-    setTickVolume(settings.masterVolume);
+    setEngineVolume(s.masterVolume);
+    setTickVolume(s.masterVolume);
 
     // Tick: should it play?
-    const shouldTick = isRunning && !settings.muted && settings.soundTheme !== 'silent' && (
-      (isFocus && settings.tickDuringFocus) ||
-      (isBreak && settings.tickDuringBreaks)
+    const shouldTick = isRunning && !s.muted && s.soundTheme !== 'silent' && (
+      (isFocus && s.tickDuringFocus) ||
+      (isBreak && s.tickDuringBreaks)
     );
 
     if (shouldTick && !isTickRunning()) {
@@ -71,25 +77,23 @@ export function useAudioSync() {
     }
 
     // Ambient: should it play?
-    const shouldAmbient = isRunning && isFocus && !settings.muted &&
-      settings.soundTheme !== 'silent' &&
-      settings.ambientSound !== 'none' &&
-      settings.ambientVolume > 0;
+    const shouldAmbient = isRunning && isFocus && !s.muted &&
+      s.soundTheme !== 'silent' &&
+      s.ambientSound !== 'none' &&
+      s.ambientVolume > 0;
 
     if (shouldAmbient && !ambientActiveRef.current) {
       resumeContext();
-      startAmbientSound(settings.ambientSound, settings.ambientVolume);
+      startAmbientSound(s.ambientSound, s.ambientVolume);
       ambientActiveRef.current = true;
     } else if (!shouldAmbient && ambientActiveRef.current) {
       stopAmbientSound();
       ambientActiveRef.current = false;
     } else if (shouldAmbient && ambientActiveRef.current) {
-      // Volume change only → just update gain, don't restart
-      setAmbientVolume(settings.ambientVolume);
-      // Type change → restart with new track (startAmbientSound handles same-type no-op)
-      startAmbientSound(settings.ambientSound, settings.ambientVolume);
+      setAmbientVolume(s.ambientVolume);
+      startAmbientSound(s.ambientSound, s.ambientVolume);
     }
-  }, [settings]);
+  }, []); // No deps — reads from refs
 
   // Poll timer state every 2 seconds
   const fetchTimerState = useCallback(async () => {
@@ -100,14 +104,14 @@ export function useAudioSync() {
         const newState = data.state ? { status: data.state.status, mode: data.state.mode } : null;
         const changed = JSON.stringify(newState) !== JSON.stringify(timerStateRef.current);
         timerStateRef.current = newState;
-        if (changed) syncAudio(); // Timer state changed — re-evaluate audio
+        if (changed) syncAudio();
       }
     } catch { /* silent */ }
   }, [syncAudio]);
 
-  // Start polling on mount
+  // Start polling on mount — stable interval since fetchTimerState is stable
   useEffect(() => {
-    fetchTimerState(); // Initial fetch
+    fetchTimerState();
     pollRef.current = setInterval(fetchTimerState, 2000);
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
@@ -117,6 +121,7 @@ export function useAudioSync() {
   // React to EVERY settings change instantly
   useEffect(() => {
     syncAudio();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     settings?.muted,
     settings?.soundTheme,
@@ -126,6 +131,5 @@ export function useAudioSync() {
     settings?.last30sTicking,
     settings?.ambientSound,
     settings?.ambientVolume,
-    syncAudio,
   ]);
 }

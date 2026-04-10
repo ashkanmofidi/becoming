@@ -108,6 +108,7 @@ export function useTimer(options: UseTimerOptions): UseTimerReturn {
         setRemainingSeconds(-elapsed);
       }, 100);
     } else if (state?.status === 'paused' && state.startedAt) {
+      completingRef.current = false; // Reset guard when paused
       const remaining = calculateRemainingSeconds(
         state.startedAt,
         state.configuredDuration,
@@ -162,6 +163,7 @@ export function useTimer(options: UseTimerOptions): UseTimerReturn {
   const apiCall = useCallback(async (
     action: string,
     extra: Record<string, unknown>,
+    retries = 0,
   ) => {
     try {
       setError(null);
@@ -175,6 +177,8 @@ export function useTimer(options: UseTimerOptions): UseTimerReturn {
 
       if (!res.ok) {
         setError(data.error || 'Timer action failed');
+        // Reset completion guard on failure so it can retry
+        if (action === 'complete') completingRef.current = false;
         return;
       }
 
@@ -186,6 +190,16 @@ export function useTimer(options: UseTimerOptions): UseTimerReturn {
         options.onComplete?.();
       }
     } catch {
+      // Retry critical actions (complete) up to 2 times
+      if (action === 'complete' && retries < 2) {
+        completingRef.current = false;
+        setTimeout(() => {
+          completingRef.current = true;
+          apiCall('complete', extra, retries + 1);
+        }, 1000 * (retries + 1));
+        return;
+      }
+      completingRef.current = false;
       setError('Network error. Please try again.');
     }
   }, [deviceId, options.onComplete]);

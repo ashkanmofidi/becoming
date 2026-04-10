@@ -232,8 +232,8 @@ describe('migrateSettings', () => {
     };
     const migrated = migrateSettings(old);
     expect(migrated.focusDuration).toBe(30);
-    expect((migrated as Record<string, unknown>)['unknownField']).toBeUndefined();
-    expect((migrated as Record<string, unknown>)['anotherUnknown']).toBeUndefined();
+    expect((migrated as unknown as Record<string, unknown>)['unknownField']).toBeUndefined();
+    expect((migrated as unknown as Record<string, unknown>)['anotherUnknown']).toBeUndefined();
   });
 
   it('returns a complete UserSettings object', () => {

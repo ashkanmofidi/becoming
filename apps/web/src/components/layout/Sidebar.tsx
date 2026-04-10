@@ -167,8 +167,8 @@ export function Sidebar({ userName, userEmail, userPicture, userRole, confirmLog
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowLogoutConfirm(false)} />
-          <div className="relative bg-bg-card border border-surface-700 rounded-xl p-6 max-w-sm w-full shadow-2xl" role="dialog">
-            <h3 className="text-white font-semibold mb-2">Session in progress</h3>
+          <div className="relative bg-bg-card border border-surface-700 rounded-xl p-6 max-w-sm w-full shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="logout-dialog-title">
+            <h3 id="logout-dialog-title" className="text-white font-semibold mb-2">Session in progress</h3>
             <p className="text-surface-300 text-sm mb-4">
               You have a focus session in progress. Logging out will reset your timer. Continue?
             </p>

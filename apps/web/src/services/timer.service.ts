@@ -183,9 +183,7 @@ export const timerService = {
     state.overtimeStartedAt = null;
     state.configuredDuration = getDurationForMode(nextMode, settings);
 
-    if (state.mode === 'focus' && nextMode !== 'focus') {
-      // Cycle completed
-    }
+    // Increment cycle counter when entering long break (full cycle completed)
     if (nextMode === 'long_break') {
       state.cycleNumber++;
     }
@@ -431,7 +429,13 @@ export const timerService = {
       deletedAt: null,
     };
 
-    await sessionRepo.create(session);
+    try {
+      await sessionRepo.create(session);
+    } catch (err) {
+      // Retry once — session logging is critical
+      logger.error('Session create failed, retrying', { userId, error: err });
+      await sessionRepo.create(session);
+    }
     return session;
   },
 

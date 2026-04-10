@@ -12,11 +12,13 @@ export default function SessionLogPage() {
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | TimerMode>('all');
   const [showAbandoned, setShowAbandoned] = useState(false);
 
   const fetchSessions = useCallback(async () => {
     setIsLoading(true);
+    setFetchError(null);
     try {
       const params = new URLSearchParams();
       if (filter !== 'all') params.set('type', filter);
@@ -27,9 +29,11 @@ export default function SessionLogPage() {
         const data = await res.json();
         setSessions(data.sessions ?? []);
         setTotal(data.total ?? 0);
+      } else {
+        setFetchError('Failed to load sessions');
       }
     } catch {
-      // Silently retry
+      setFetchError('Network error loading sessions');
     } finally {
       setIsLoading(false);
     }
@@ -72,6 +76,14 @@ export default function SessionLogPage() {
           Show abandoned
         </label>
       </div>
+
+      {/* Error state */}
+      {fetchError && (
+        <div className="bg-red-900/20 border border-red-800 text-red-300 text-sm p-3 rounded-lg mb-4 flex items-center justify-between">
+          <span>{fetchError}</span>
+          <button onClick={fetchSessions} className="text-amber hover:text-amber-light underline text-xs">Retry</button>
+        </div>
+      )}
 
       {/* Session table */}
       {isLoading ? (

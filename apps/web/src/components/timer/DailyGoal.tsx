@@ -30,7 +30,14 @@ export function DailyGoal({ completed, target }: DailyGoalProps) {
       </div>
 
       {/* Progress bar (PRD: 6px, rounded, amber fill on dark gray) */}
-      <div className="h-1.5 bg-surface-900 rounded-full overflow-hidden">
+      <div
+        className="h-1.5 bg-surface-900 rounded-full overflow-hidden"
+        role="progressbar"
+        aria-valuenow={completed}
+        aria-valuemin={0}
+        aria-valuemax={target}
+        aria-label={`Daily goal: ${completed} of ${target} sessions completed`}
+      >
         <div
           className={`h-full rounded-full transition-all duration-400 ease-out ${
             met ? 'bg-green-500' : 'bg-amber'

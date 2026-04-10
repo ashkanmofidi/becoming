@@ -129,13 +129,21 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       });
 
     // Pusher connection state monitoring
-    pusher.connection.bind('connected', () => setConnectionStatus('connected'));
-    pusher.connection.bind('connecting', () => setConnectionStatus('syncing'));
-    pusher.connection.bind('disconnected', () => setConnectionStatus('offline'));
-    pusher.connection.bind('unavailable', () => setConnectionStatus('offline'));
+    const onConnected = () => setConnectionStatus('connected');
+    const onConnecting = () => setConnectionStatus('syncing');
+    const onDisconnected = () => { setConnectionStatus('offline'); pusherReady.current = false; };
+    const onUnavailable = () => { setConnectionStatus('offline'); pusherReady.current = false; };
+
+    pusher.connection.bind('connected', onConnected);
+    pusher.connection.bind('connecting', onConnecting);
+    pusher.connection.bind('disconnected', onDisconnected);
+    pusher.connection.bind('unavailable', onUnavailable);
 
     return () => {
-      // Don't disconnect on unmount — Pusher connection should persist
+      pusher.connection.unbind('connected', onConnected);
+      pusher.connection.unbind('connecting', onConnecting);
+      pusher.connection.unbind('disconnected', onDisconnected);
+      pusher.connection.unbind('unavailable', onUnavailable);
     };
   }, [updateState]);
 
@@ -189,10 +197,25 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     // Always do an initial poll to get state immediately
     poll();
 
-    // If Pusher is not configured, run continuous polling
-    // If Pusher IS configured, poll less frequently (every 10s) as a safety net
-    const interval = setInterval(poll, pusherReady.current ? 10000 : POLL_INTERVAL);
-    return () => clearInterval(interval);
+    // Adaptive polling: check pusherReady dynamically, not just at creation time.
+    // If Pusher is active, poll less frequently (10s safety net).
+    // If Pusher disconnects or isn't configured, poll at full speed (2s).
+    let intervalId: ReturnType<typeof setInterval>;
+    const startInterval = () => {
+      intervalId = setInterval(poll, pusherReady.current ? 10000 : POLL_INTERVAL);
+    };
+    startInterval();
+
+    // Re-evaluate interval every 30s in case Pusher state changed
+    const checkInterval = setInterval(() => {
+      clearInterval(intervalId);
+      startInterval();
+    }, 30000);
+
+    return () => {
+      clearInterval(intervalId);
+      clearInterval(checkInterval);
+    };
   }, [poll]);
 
   // Reconnect on tab visibility

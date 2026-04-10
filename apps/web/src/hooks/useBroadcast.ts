@@ -18,6 +18,8 @@ export function useBroadcast(
   onMessage: (msg: BroadcastMessage) => void,
 ) {
   const channelRef = useRef<BroadcastChannel | null>(null);
+  const onMessageRef = useRef(onMessage);
+  onMessageRef.current = onMessage; // Always use latest callback without recreating channel
 
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return;
@@ -26,14 +28,14 @@ export function useBroadcast(
     channelRef.current = channel;
 
     channel.onmessage = (event) => {
-      onMessage(event.data as BroadcastMessage);
+      onMessageRef.current(event.data as BroadcastMessage);
     };
 
     return () => {
       channel.close();
       channelRef.current = null;
     };
-  }, [channelName, onMessage]);
+  }, [channelName]); // Only recreate channel if name changes, not on every callback change
 
   const postMessage = useCallback((msg: BroadcastMessage) => {
     channelRef.current?.postMessage(msg);
