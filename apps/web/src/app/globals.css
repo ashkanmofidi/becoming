@@ -160,3 +160,108 @@ body:not(.light) {
 .text-accent { color: var(--accent-color); }
 .bg-accent { background-color: var(--accent-color); }
 .border-accent { border-color: var(--accent-color); }
+
+/* ═══════════════════════════════════════════════════════════
+   HIGH CONTRAST MODE — WCAG AAA (7:1 ratio)
+   ═══════════════════════════════════════════════════════════ */
+
+/* Dark + High Contrast */
+[data-high-contrast="true"].dark body,
+[data-high-contrast="true"]:not(.light) body {
+  background-color: #000000 !important;
+  color: #FFFFFF !important;
+}
+[data-high-contrast="true"].dark .bg-bg-primary { background-color: #000000 !important; }
+[data-high-contrast="true"].dark .bg-bg-card { background-color: #0A0A0A !important; border: 2px solid #FFFFFF !important; }
+[data-high-contrast="true"].dark .bg-surface-900 { background-color: #0A0A0A !important; }
+[data-high-contrast="true"].dark .text-white,
+[data-high-contrast="true"].dark .text-surface-100,
+[data-high-contrast="true"].dark .text-surface-200,
+[data-high-contrast="true"].dark .text-surface-300 { color: #FFFFFF !important; }
+[data-high-contrast="true"].dark .text-surface-400,
+[data-high-contrast="true"].dark .text-surface-500 { color: #E5E7EB !important; }
+[data-high-contrast="true"].dark .border-surface-900,
+[data-high-contrast="true"].dark .border-surface-700 { border-color: #FFFFFF !important; border-width: 2px !important; }
+[data-high-contrast="true"].dark .text-amber { color: #FFC107 !important; }
+[data-high-contrast="true"].dark aside { border-right: 2px solid #FFFFFF !important; }
+
+/* Light + High Contrast */
+[data-high-contrast="true"].light body { background-color: #FFFFFF !important; color: #000000 !important; }
+[data-high-contrast="true"].light .bg-bg-card { border: 2px solid #000000 !important; }
+[data-high-contrast="true"].light .text-surface-300,
+[data-high-contrast="true"].light .text-surface-400,
+[data-high-contrast="true"].light .text-surface-500 { color: #000000 !important; }
+[data-high-contrast="true"].light .border-surface-900,
+[data-high-contrast="true"].light .border-surface-700 { border-color: #000000 !important; border-width: 2px !important; }
+
+/* Focus indicators — thick ring for keyboard navigation */
+[data-high-contrast="true"] button:focus-visible,
+[data-high-contrast="true"] a:focus-visible,
+[data-high-contrast="true"] input:focus-visible,
+[data-high-contrast="true"] select:focus-visible,
+[data-high-contrast="true"] [role="switch"]:focus-visible {
+  outline: 3px solid currentColor !important;
+  outline-offset: 2px !important;
+}
+
+/* Increase font weight */
+[data-high-contrast="true"] { font-weight: 500; }
+[data-high-contrast="true"] h1, [data-high-contrast="true"] h2, [data-high-contrast="true"] h3 { font-weight: 700 !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   LARGE TAP TARGETS — 56px minimum (WCAG 2.2 AAA)
+   ═══════════════════════════════════════════════════════════ */
+
+[data-large-targets="true"] button,
+[data-large-targets="true"] a[href],
+[data-large-targets="true"] [role="switch"],
+[data-large-targets="true"] select {
+  min-height: 56px !important;
+  min-width: 56px !important;
+  padding: 12px 16px !important;
+}
+
+[data-large-targets="true"] input,
+[data-large-targets="true"] textarea {
+  min-height: 56px !important;
+  padding: 14px 12px !important;
+}
+
+/* Increase spacing between adjacent targets */
+[data-large-targets="true"] .flex.gap-1 { gap: 8px !important; }
+[data-large-targets="true"] .flex.gap-2 { gap: 12px !important; }
+[data-large-targets="true"] .flex.gap-3 { gap: 16px !important; }
+[data-large-targets="true"] .space-y-1 > * + * { margin-top: 8px !important; }
+[data-large-targets="true"] .space-y-2 > * + * { margin-top: 12px !important; }
+[data-large-targets="true"] .space-y-3 > * + * { margin-top: 16px !important; }
+[data-large-targets="true"] .space-y-4 > * + * { margin-top: 20px !important; }
+
+/* Nav items full width */
+[data-large-targets="true"] nav a { min-height: 56px !important; display: flex !important; align-items: center !important; }
+
+/* ═══════════════════════════════════════════════════════════
+   COLOR BLIND MODES — palette swaps
+   ═══════════════════════════════════════════════════════════ */
+
+/* Protanopia (red-blind): focus=blue, break=yellow */
+[data-color-blind="protanopia"] .text-amber { color: #2563EB !important; }
+[data-color-blind="protanopia"] .bg-amber { background-color: #2563EB !important; }
+[data-color-blind="protanopia"] .border-amber { border-color: #2563EB !important; }
+[data-color-blind="protanopia"] .text-teal { color: #EAB308 !important; }
+[data-color-blind="protanopia"] .bg-teal { background-color: #EAB308 !important; }
+[data-color-blind="protanopia"] .text-green-400,
+[data-color-blind="protanopia"] .text-green-500 { color: #3B82F6 !important; }
+[data-color-blind="protanopia"] .text-red-400 { color: #7C3AED !important; }
+
+/* Deuteranopia (green-blind): focus=orange, break=blue */
+[data-color-blind="deuteranopia"] .text-teal { color: #3B82F6 !important; }
+[data-color-blind="deuteranopia"] .bg-teal { background-color: #3B82F6 !important; }
+[data-color-blind="deuteranopia"] .text-green-400,
+[data-color-blind="deuteranopia"] .text-green-500 { color: #2563EB !important; }
+
+/* Tritanopia (blue-yellow blind): focus=red, break=green */
+[data-color-blind="tritanopia"] .text-amber { color: #DC2626 !important; }
+[data-color-blind="tritanopia"] .bg-amber { background-color: #DC2626 !important; }
+[data-color-blind="tritanopia"] .border-amber { border-color: #DC2626 !important; }
+[data-color-blind="tritanopia"] .text-teal { color: #16A34A !important; }
+[data-color-blind="tritanopia"] .bg-teal { background-color: #16A34A !important; }
